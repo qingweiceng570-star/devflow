@@ -1,9 +1,9 @@
 """Lease-expiry recovery (README 17.3).
 
-Jobs whose lease expired without completion are re-queued (retryable work) or
-finalized as failed; linked sync runs follow the job state so the run list
-never shows a stuck "running" record. External writes would require
-reconciliation instead of replay - none exist yet in M1.
+Sync jobs are idempotent and are re-queued on lease expiry. Analysis runs are
+not auto-retried: an interrupted run is finalized as failed with
+WORKER_INTERRUPTED and the user starts a new run. External writes would
+require reconciliation instead of replay - none exist yet.
 """
 
 import logging
@@ -11,28 +11,42 @@ from datetime import UTC, datetime
 
 from sqlalchemy import select
 
-from app.domain.enums import JobKind, JobStatus, SyncStatus
+from app.domain.enums import JobKind, JobStatus, RunStatus, SyncStatus
 from app.jobs.queue import decide_retry
-from app.persistence.models import Job, SyncRun
+from app.persistence.models import Job, Run, SyncRun
 
 log = logging.getLogger("devflow.recovery")
 
 
 def _update_entity(db, job: Job, *, failed: bool, now: datetime) -> None:
-    if job.kind != JobKind.SYNC:
-        return
-    run = db.get(SyncRun, job.entity_id)
-    if run is None:
-        return
-    if failed:
-        run.status = SyncStatus.FAILED
-        run.errors = list(run.errors or []) + [
-            {"code": "WORKER_INTERRUPTED", "message": "执行进程中断，重试次数已用尽"}
-        ]
-        run.finished_at = now
-    elif run.status == SyncStatus.RUNNING:
-        run.status = SyncStatus.QUEUED
-    run.updated_at = now
+    if job.kind == JobKind.SYNC:
+        run = db.get(SyncRun, job.entity_id)
+        if run is None:
+            return
+        if failed:
+            run.status = SyncStatus.FAILED
+            run.errors = list(run.errors or []) + [
+                {"code": "WORKER_INTERRUPTED", "message": "执行进程中断，重试次数已用尽"}
+            ]
+            run.finished_at = now
+        elif run.status == SyncStatus.RUNNING:
+            run.status = SyncStatus.QUEUED
+        run.updated_at = now
+    elif job.kind == JobKind.ANALYZE:
+        run = db.get(Run, job.entity_id)
+        if run is None or run.status in (RunStatus.COMPLETED, RunStatus.FAILED,
+                                         RunStatus.CANCELLED, RunStatus.TIMED_OUT):
+            return
+        from app.services.run_service import finalize_run
+
+        marker = {"code": "WORKER_INTERRUPTED", "message": "执行进程中断"}
+        finalize_run(
+            db,
+            run,
+            status=RunStatus.FAILED,
+            error=marker,
+            partial_result={"note": "分析未完成；已收集的工具轨迹与证据仍可查看"},
+        )
 
 
 def recover_expired(db_factory, settings) -> list[dict]:
@@ -49,10 +63,13 @@ def recover_expired(db_factory, settings) -> list[dict]:
             .with_for_update(skip_locked=True)
         ).all()
         for job in jobs:
+            # Interrupted syncs are resumed from their committed watermarks;
+            # interrupted analyses are not replayed (no partial-run resume yet).
+            retryable = job.kind == JobKind.SYNC
             decision = decide_retry(
                 attempt=job.attempt,
                 max_attempts=job.max_attempts,
-                retryable=True,
+                retryable=retryable,
                 retry_after=None,
                 settings=settings,
             )

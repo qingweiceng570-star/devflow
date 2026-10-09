@@ -23,6 +23,11 @@ class RetryDecision:
     available_at: datetime
 
 
+class LeaseLost(Exception):
+    """The job lease moved to another owner; the caller must stop without
+    touching job state (recovery owns the row now)."""
+
+
 def default_max_attempts(settings) -> int:
     return settings.job_max_attempts
 

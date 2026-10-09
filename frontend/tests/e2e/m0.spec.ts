@@ -49,3 +49,18 @@ test("repository workspace is reachable after login", async ({ page }) => {
   await expect(page.getByLabel("仓库（owner/repo）")).toBeVisible();
   await page.getByRole("button", { name: "刷新" }).click();
 });
+
+test("repository overview lists conversations and runs", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("账户", { exact: true }).fill(credentials.username);
+  await page.getByLabel("密码", { exact: true }).fill(credentials.password);
+  await page.getByRole("button", { name: "进入工作空间" }).click();
+  await page.waitForURL("http://localhost:3100/");
+  await page.goto("/repos");
+  const enter = page.getByRole("link", { name: "进入" }).first();
+  await expect(enter).toBeVisible({ timeout: 15000 });
+  await enter.click();
+  await expect(page.getByRole("heading", { name: "分析会话" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "新建分析会话" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "最近运行" })).toBeVisible();
+});

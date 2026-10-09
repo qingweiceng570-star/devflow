@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.agents.runtime import AgentRuntime
+from app.agents.probe import ProbeAgent
 from app.core.errors import DomainError
 from app.integrations.llm.fixture import FixtureModel
 from app.integrations.llm.protocol import ModelReply, ToolCall
@@ -13,7 +13,7 @@ from app.tools.registry import ToolRegistry
 
 @pytest.mark.parametrize("case_id", ["normal_pr", "risk_pr", "failed_ci"])
 async def test_fixture_tool_loop_binds_evidence(settings, scope, case_id):
-    result = await AgentRuntime(FixtureModel(), ToolRegistry(scope), settings).run(case_id)
+    result = await ProbeAgent(FixtureModel(), ToolRegistry(scope), settings).run(case_id)
     assert all(result["checks"].values())
     assert result["usage"]["model_steps"] == 2
     assert result["usage"]["tool_calls"] == 1
@@ -54,14 +54,14 @@ class RepeatingModel:
 
 async def test_repeated_calls_stop(settings, scope):
     with pytest.raises(DomainError, match="重复") as caught:
-        await AgentRuntime(RepeatingModel(), ToolRegistry(scope), settings).run("normal_pr")
+        await ProbeAgent(RepeatingModel(), ToolRegistry(scope), settings).run("normal_pr")
     assert caught.value.code == "REPEATED_TOOL_CALL"
 
 
 async def test_tool_call_limit(settings, scope):
     settings.agent_max_tool_calls = 1
     with pytest.raises(DomainError) as caught:
-        await AgentRuntime(RepeatingModel(), ToolRegistry(scope), settings).run("normal_pr")
+        await ProbeAgent(RepeatingModel(), ToolRegistry(scope), settings).run("normal_pr")
     assert caught.value.code == "TOOL_LIMIT"
 
 
@@ -75,9 +75,47 @@ class InvalidAnswerModel(FixtureModel):
         return reply
 
 
+class TruncatedOnceModel(FixtureModel):
+    """First final answer is length-truncated garbage; the repair retry succeeds."""
+
+    def __init__(self):
+        self.final_calls = 0
+
+    async def complete(self, request):
+        reply = await super().complete(request)
+        if reply.content:
+            self.final_calls += 1
+            if self.final_calls == 1:
+                reply.content = reply.content[:20]  # invalid JSON + length reason
+                reply.finish_reason = "length"
+        return reply
+
+
+async def test_truncated_final_answer_gets_one_concise_repair(settings, scope):
+    model = TruncatedOnceModel()
+    result = await ProbeAgent(model, ToolRegistry(scope), settings).run("normal_pr")
+    assert result["checks"]["structured_output"]
+    assert model.final_calls == 2  # one repair retry happened
+
+
+class AlwaysTruncatedModel(FixtureModel):
+    async def complete(self, request):
+        reply = await super().complete(request)
+        if reply.content:
+            reply.content = reply.content[:20]
+            reply.finish_reason = "length"
+        return reply
+
+
+async def test_truncation_repair_is_bounded(settings, scope):
+    with pytest.raises(DomainError) as caught:
+        await ProbeAgent(AlwaysTruncatedModel(), ToolRegistry(scope), settings).run("normal_pr")
+    assert caught.value.code == "MODEL_OUTPUT_INCOMPLETE"
+
+
 async def test_fabricated_evidence_fails_after_one_repair(settings, scope):
     with pytest.raises(DomainError) as caught:
-        await AgentRuntime(InvalidAnswerModel(), ToolRegistry(scope), settings).run("normal_pr")
+        await ProbeAgent(InvalidAnswerModel(), ToolRegistry(scope), settings).run("normal_pr")
     assert caught.value.code == "MODEL_INCOMPATIBLE"
 
 
@@ -85,14 +123,14 @@ async def test_cancel_before_model_call(settings, scope):
     cancel = asyncio.Event()
     cancel.set()
     with pytest.raises(DomainError) as caught:
-        await AgentRuntime(FixtureModel(), ToolRegistry(scope), settings).run("normal_pr", cancel)
+        await ProbeAgent(FixtureModel(), ToolRegistry(scope), settings).run("normal_pr", cancel)
     assert caught.value.code == "CANCELLED"
 
 
 async def test_token_budget_before_call(settings, scope):
     settings.agent_total_token_budget = 1000
     with pytest.raises(DomainError) as caught:
-        await AgentRuntime(FixtureModel(), ToolRegistry(scope), settings).run("normal_pr")
+        await ProbeAgent(FixtureModel(), ToolRegistry(scope), settings).run("normal_pr")
     assert caught.value.code == "BUDGET_EXCEEDED"
 
 
@@ -103,5 +141,5 @@ async def test_timeout(settings, scope):
 
     settings.agent_timeout_seconds = 1
     with pytest.raises(DomainError) as caught:
-        await AgentRuntime(SlowModel(), ToolRegistry(scope), settings).run("normal_pr")
+        await ProbeAgent(SlowModel(), ToolRegistry(scope), settings).run("normal_pr")
     assert caught.value.code == "AGENT_TIMEOUT"

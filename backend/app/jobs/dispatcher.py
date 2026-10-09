@@ -2,6 +2,7 @@ from app.core.config import Settings
 from app.core.errors import DomainError
 from app.domain.enums import JobKind
 from app.ingestion.github_sync import SyncRetry, run_sync
+from app.jobs.handlers.analyze import handle_analyze
 
 
 class HandlerRetry(Exception):
@@ -28,6 +29,7 @@ def handle_sync(db_factory, settings: Settings, job, worker_id: str, client_fact
 
 HANDLERS = {
     JobKind.SYNC: handle_sync,
+    JobKind.ANALYZE: handle_analyze,
 }
 
 

@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 
-from app.agents.runtime import AgentRuntime
+from app.agents.probe import ProbeAgent
 from app.api.deps import current_identity, get_db, mutation_identity
 from app.core.errors import DomainError
 from app.domain.contracts import RepoScope
@@ -33,7 +33,7 @@ def capabilities(request: Request, identity=Depends(current_identity), db=Depend
     )
     return envelope(
         {
-            "stage": "M1",
+            "stage": "M2",
             "configured_provider": settings.llm_provider,
             "model_configured": settings.model_configured,
             "model": settings.llm_model or None,
@@ -73,7 +73,7 @@ async def probe(
     try:
         try:
             model = request.app.state.model_factory(settings, body.source)
-            result = await AgentRuntime(model, ToolRegistry(scope), settings).run(body.case_id)
+            result = await ProbeAgent(model, ToolRegistry(scope), settings).run(body.case_id)
             result.update(
                 passed=True,
                 synthetic_input=True,

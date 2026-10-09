@@ -1,8 +1,10 @@
-# M0/M1 本地开发与启动
+# M0–M2 本地开发与启动
 
 M0 提供登录和模型工具协议验证。三个样例是人工构造的数据，不连接 GitHub，也不输出真实 PR 的合入判断。真实模型适配已实现；当前配置为 DeepSeek（`deepseek-chat`），离线模式仍可随时回退。
 
 M1 增加 GitHub 只读接入与增量同步、持久化 Job 队列（Worker 执行）、固定 SHA 代码工作区与证据查询，前端新增仓库页（/repos）。验收记录见 [M1 验收](demos/m1-acceptance.md)。
+
+M2 提供 PR 审查闭环：会话与运行、ChatAgent 受控工具循环、证据引用校验、裁决规则、SSE 进度与聊天前端。验收记录见 [M2 验收](demos/m2-acceptance.md)，决策见 [ADR 0004](adr/0004-m2-run-pipeline.md)。
 
 ## 环境与锁文件
 
@@ -189,6 +191,30 @@ backend/.venv/Scripts/python.exe scripts/m1_demo_evidence.py simonw/ttok README.
 
 Worker 每个轮询周期心跳一次；租约 60 秒、每页边界续期；Worker 被强杀后，过期租约在恢复周期（默认 60 秒）内被回收：可重试任务回到 retry_wait，次数用尽则任务与同步运行一并标记失败。集成测试在真实 PostgreSQL 上验证这些行为（见下）。
 
+## M2：PR 审查会话与运行
+
+### 使用方式
+
+浏览器：仓库列表 → 「进入」→ 「新建分析会话」→ 填 PR 编号与关注点 → 「提交分析」。运行期间页面由 SSE 实时展示工具轨迹，可点击「取消当前分析」；完成后按 结论 → 风险发现（带证据芯片）→ 待验证推测 → 证据缺口 → 建议下一步 → 局限性 展示。刷新页面自动恢复。
+
+API 主线（均需登录 Cookie；写操作需 `Origin` 与 `X-CSRF-Token`）：
+
+- `POST /api/v1/conversations`（body 含 repo_id）→ 会话
+- `POST /api/v1/conversations/{id}/runs`（`{"message","kind":"pr_review","target":{"pr_number":N}}`）→ 202，可带 `Idempotency-Key`；会话内已有活动运行返回 409 `ACTIVE_RUN_EXISTS`
+- `GET /api/v1/runs/{id}` / `GET /api/v1/runs/{id}/tools` / `POST /api/v1/runs/{id}/cancel`
+- `GET /api/v1/runs/{id}/events`：SSE；支持 `Last-Event-ID` 或 `?after=` 断线恢复，15 秒心跳注释，终态后关闭
+
+### 边界与行为
+
+- 分析任务 `max_attempts=1`：失败（含被中断）即终态，不做自动重放；重新分析请新建运行（见 ADR 0004）。
+- 裁决只降级不升级；正结论要求：无阻塞级发现、coverage 完整、目标版本未变化、mergeable 为真且**必需检查已配置并全部通过**。必需检查通过管理员配置：`PATCH /repos/{id}` 携带 `required_checks`（工作流名称列表）与 `expected_version`。
+- 工具结果双重封顶：单次 64 KiB（TOOL_RESULT_MAX_BYTES）与每运行累计 256 KiB（TOOL_BYTES_TOTAL_LIMIT）；超出返回 `TOOL_BUDGET_EXCEEDED`/`TOOL_RESULT_TOO_LARGE`，模型据此收束。
+- 输出上限 MODEL_OUTPUT_TOKEN_LIMIT 默认 3000；终稿因长度被截断时循环会要求一次精简重写，两次仍截断才失败。
+
+### SSE 与代理说明
+
+Next.js 代理对 `Accept: text/event-stream` 的请求透传流式响应（不缓冲、不加 65 秒超时）；普通请求仍为有界缓冲。若绕过 Next 直连 8100，前端需自行处理 CORS 与 Cookie。
+
 ## 常见问题
 
 - 503 DATABASE_NOT_READY：启动数据库并执行迁移；不要在 API 启动时自动 `create_all`。
@@ -202,4 +228,4 @@ Worker 每个轮询周期心跳一次；租约 60 秒、每页边界续期；Wor
 
 ## 当前边界
 
-M1 已实现：GitHub 只读接入、增量同步（水位/ETag/限流重试/幂等）、PostgreSQL 租约队列与恢复、固定 SHA 代码工作区、证据采集与查询、仓库页。未实现：PR/Issue/CI 的业务分析（ChatAgent 工具集）、业务 SSE、RAG、多 Agent、记忆、周报与外部写操作——按 README 的 M2–M7 顺序实现。M0 的诊断接口保持有界，不再扩展。
+M1 已实现：GitHub 只读接入、增量同步（水位/ETag/限流重试/幂等）、PostgreSQL 租约队列与恢复、固定 SHA 代码工作区、证据采集与查询、仓库页。M2 已实现：会话与运行、ChatAgent 受控工具循环（PR 审查九件套工具）、结构化结论与引用校验、裁决规则、SSE 与聊天前端。未实现：Issue/CI 专用 Agent、多 Agent 工作流、RAG、记忆与摘要压缩、周报、外部写操作——按 README 的 M3–M7 顺序实现。

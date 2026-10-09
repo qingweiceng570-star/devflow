@@ -1,6 +1,7 @@
 from typing import Literal
+from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.domain.contracts import Contract
 from app.domain.enums import SyncResource
@@ -24,6 +25,7 @@ class RegisterRepoRequest(Contract):
 class PatchRepoRequest(Contract):
     expected_version: int = Field(ge=1)
     state: Literal["active", "disabled"] | None = None
+    required_checks: list[str] | None = Field(default=None, max_length=20)
 
 
 class SyncRequest(Contract):
@@ -31,3 +33,24 @@ class SyncRequest(Contract):
         default_factory=lambda: list(SyncResource), min_length=1, max_length=5
     )
     mode: Literal["incremental"] = "incremental"
+
+
+class CreateConversationRequest(Contract):
+    repo_id: UUID
+    title: str | None = Field(default=None, max_length=200)
+
+
+class PrReviewTarget(Contract):
+    pr_number: int = Field(ge=1)
+
+
+class SubmitRunRequest(Contract):
+    message: str = Field(min_length=1, max_length=64000)
+    kind: Literal["pr_review"] = "pr_review"
+    target: PrReviewTarget | None = None
+
+    @model_validator(mode="after")
+    def require_target(self) -> "SubmitRunRequest":
+        if self.kind == "pr_review" and self.target is None:
+            raise ValueError("pr_review 需要 target.pr_number")
+        return self

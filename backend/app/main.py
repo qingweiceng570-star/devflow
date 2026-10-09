@@ -6,7 +6,16 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api.routes import auth, evidence, health, jobs, repositories, sync
+from app.api.routes import (
+    auth,
+    conversations,
+    evidence,
+    health,
+    jobs,
+    repositories,
+    runs,
+    sync,
+)
 from app.api.routes import settings as settings_routes
 from app.api.routes.auth import LoginLimiter
 from app.bootstrap import create_model
@@ -111,7 +120,17 @@ def create_app(settings: Settings | None = None, *, session_factory=None, model_
             },
         )
 
-    for module in (auth, health, settings_routes, repositories, sync, jobs, evidence):
+    for module in (
+        auth,
+        health,
+        settings_routes,
+        repositories,
+        sync,
+        jobs,
+        evidence,
+        conversations,
+        runs,
+    ):
         app.include_router(module.router, prefix="/api/v1")
 
     return app

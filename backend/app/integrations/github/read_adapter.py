@@ -88,6 +88,19 @@ class GitHubRead:
             )
         return Page(items=list(page.data.get("jobs") or []), next_cursor=page.next_cursor)
 
+    def list_pr_files(self, number: int, cursor: str | None = None) -> Page:
+        if cursor:
+            page = self.client.get(cursor)
+        else:
+            page = self.client.get(
+                f"/repos/{self.full_name}/pulls/{number}/files", {"per_page": 100}
+            )
+        return Page(items=list(page.data), next_cursor=page.next_cursor)
+
+    def get_pr_live(self, number: int) -> dict:
+        """Fresh PR metadata for fixing base/head at analysis start (README 3.2)."""
+        return self.client.get(f"/repos/{self.full_name}/pulls/{number}").data
+
     def list_events(self, cursor: str | None = None, etag: str | None = None) -> Page:
         if cursor:
             page = self.client.get(cursor)

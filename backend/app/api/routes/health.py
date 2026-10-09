@@ -7,7 +7,7 @@ from app.schemas.responses import envelope
 
 router = APIRouter()
 
-EXPECTED_REVISIONS = {"0002_m1"}
+EXPECTED_REVISIONS = {"0003_m2"}
 
 
 @router.get("/health/live")

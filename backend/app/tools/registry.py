@@ -24,6 +24,10 @@ class ToolRegistry:
         self.successful_evidence: dict[str, str] = {}
 
     @property
+    def has_evidence(self) -> bool:
+        return bool(self.successful_evidence)
+
+    @property
     def schemas(self):
         return [
             {

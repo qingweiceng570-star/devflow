@@ -53,14 +53,51 @@ def pull_payload(number: int, state: str, days_ago: float, head_sha: str, merged
 class FakeGitHub:
     """Routes the M1 sync surface; toggle flags simulate rate limiting and ETags."""
 
-    def __init__(self, full_name: str = "octo/demo", external_id: int = 12345):
+    def __init__(
+        self,
+        full_name: str = "octo/demo",
+        external_id: int = 12345,
+        head_sha: str = HEAD_SHA,
+        mergeable: bool | None = True,
+    ):
         self.full_name = full_name
         self.external_id = external_id
+        self.head_sha = head_sha
+        self.mergeable = mergeable
         self.requests: list[str] = []
         self.rate_limited_paths: set[str] = set()
         self.etag = 'W/"fake-v1"'
         self.etag_enabled = False
         self.fail_next: dict[str, int] = {}
+        self.draft = False
+        # After N pr-detail responses the head sha changes (simulates a push
+        # between the run start and its final re-check).
+        self.mutate_after_pr_detail: int | None = None
+        self._pr_detail_count = 0
+        self.pr_files: list[dict] = [
+            {
+                "filename": "src/app.py",
+                "status": "modified",
+                "additions": 3,
+                "deletions": 1,
+                "changes": 4,
+                "patch": "@@ -1,3 +1,5 @@\n line one\n+added line\n line two\n-removed line\n+replacement\n line three",
+            },
+            {
+                "filename": "assets/logo.png",
+                "status": "added",
+                "additions": 0,
+                "deletions": 0,
+                "changes": 0,
+            },
+        ]
+
+    def pr_detail(self, number: int) -> dict:
+        return {
+            **pull_payload(number, "open", 1, self.head_sha),
+            "draft": self.draft,
+            "mergeable": self.mergeable,
+        }
 
     # -- payloads ---------------------------------------------------------
     def repo_payload(self) -> dict:
@@ -199,9 +236,22 @@ class FakeGitHub:
         if path == f"/repos/{self.full_name}/pulls":
             state = (query.get("state") or ["open"])[0]
             return httpx.Response(200, json=self.pulls(state), headers=headers)
+        if path.startswith(f"/repos/{self.full_name}/pulls/") and path.endswith("/files"):
+            number = int(path.split("/")[-2])
+            return httpx.Response(200, json=self.pr_files)
         if path.startswith(f"/repos/{self.full_name}/pulls/") and path.endswith("/reviews"):
             number = int(path.split("/")[-2])
             return httpx.Response(200, json=self.reviews(number))
+        if path.startswith(f"/repos/{self.full_name}/pulls/"):
+            parts = path.split("/")
+            if len(parts) == 6 and parts[5].isdigit():
+                self._pr_detail_count += 1
+                if (
+                    self.mutate_after_pr_detail is not None
+                    and self._pr_detail_count > self.mutate_after_pr_detail
+                ):
+                    self.head_sha = "3" * 40
+                return httpx.Response(200, json=self.pr_detail(int(parts[5])))
         if path == f"/repos/{self.full_name}/actions/runs":
             return httpx.Response(200, json={"workflow_runs": self.ci_runs()}, headers=headers)
         if "/actions/runs/" in path and path.endswith("/jobs"):

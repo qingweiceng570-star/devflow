@@ -1,5 +1,4 @@
 from datetime import datetime
-from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
 
@@ -8,16 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 class Contract(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
-
-class RunStatus(StrEnum):
-    QUEUED = "queued"
-    RUNNING = "running"
-    RECOVERING = "recovering"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-    TIMED_OUT = "timed_out"
 
 
 class RepoScope(Contract):
@@ -80,9 +69,30 @@ class Evidence(Contract):
 
 class Finding(Contract):
     severity: Literal["critical", "high", "medium", "low", "info"]
-    claim: str
+    claim: str = Field(min_length=1, max_length=2000)
     evidence_ids: list[UUID] = Field(min_length=1)
-    suggestion: str
+    location: str = Field(min_length=1, max_length=500)
+    suggestion: str = Field(min_length=1, max_length=2000)
+
+
+class Hypothesis(Contract):
+    claim: str = Field(min_length=1, max_length=2000)
+    supporting_evidence_ids: list[UUID] = Field(default_factory=list)
+    counter_evidence_ids: list[UUID] = Field(default_factory=list)
+    verification_steps: list[str] = Field(default_factory=list)
+
+
+class MissingEvidence(Contract):
+    item: str = Field(min_length=1, max_length=500)
+    reason: str = Field(min_length=1, max_length=500)
+    impact: str = Field(min_length=1, max_length=500)
+    next_action: str = Field(min_length=1, max_length=500)
+
+
+class NextAction(Contract):
+    description: str = Field(min_length=1, max_length=500)
+    owner_hint: str | None = Field(default=None, max_length=120)
+    draft_id: UUID | None = None
 
 
 class AnalysisResult(Contract):
@@ -103,7 +113,9 @@ class AnalysisResult(Contract):
     coverage: Literal["complete", "partial", "unavailable"]
     freshness: Literal["fresh", "stale", "unknown"]
     findings: list[Finding] = Field(default_factory=list)
-    missing_evidence: list[str] = Field(default_factory=list)
+    hypotheses: list[Hypothesis] = Field(default_factory=list)
+    missing_evidence: list[MissingEvidence] = Field(default_factory=list)
+    next_actions: list[NextAction] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
     scope: RepoScope
 

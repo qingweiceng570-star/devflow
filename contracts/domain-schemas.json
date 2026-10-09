@@ -262,6 +262,176 @@
     "title": "Evidence",
     "type": "object"
   },
+  "Finding": {
+    "additionalProperties": false,
+    "properties": {
+      "severity": {
+        "enum": [
+          "critical",
+          "high",
+          "medium",
+          "low",
+          "info"
+        ],
+        "title": "Severity",
+        "type": "string"
+      },
+      "claim": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Claim",
+        "type": "string"
+      },
+      "evidence_ids": {
+        "items": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "minItems": 1,
+        "title": "Evidence Ids",
+        "type": "array"
+      },
+      "location": {
+        "maxLength": 500,
+        "minLength": 1,
+        "title": "Location",
+        "type": "string"
+      },
+      "suggestion": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Suggestion",
+        "type": "string"
+      }
+    },
+    "required": [
+      "severity",
+      "claim",
+      "evidence_ids",
+      "location",
+      "suggestion"
+    ],
+    "title": "Finding",
+    "type": "object"
+  },
+  "Hypothesis": {
+    "additionalProperties": false,
+    "properties": {
+      "claim": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Claim",
+        "type": "string"
+      },
+      "supporting_evidence_ids": {
+        "items": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "title": "Supporting Evidence Ids",
+        "type": "array"
+      },
+      "counter_evidence_ids": {
+        "items": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "title": "Counter Evidence Ids",
+        "type": "array"
+      },
+      "verification_steps": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Verification Steps",
+        "type": "array"
+      }
+    },
+    "required": [
+      "claim"
+    ],
+    "title": "Hypothesis",
+    "type": "object"
+  },
+  "MissingEvidence": {
+    "additionalProperties": false,
+    "properties": {
+      "item": {
+        "maxLength": 500,
+        "minLength": 1,
+        "title": "Item",
+        "type": "string"
+      },
+      "reason": {
+        "maxLength": 500,
+        "minLength": 1,
+        "title": "Reason",
+        "type": "string"
+      },
+      "impact": {
+        "maxLength": 500,
+        "minLength": 1,
+        "title": "Impact",
+        "type": "string"
+      },
+      "next_action": {
+        "maxLength": 500,
+        "minLength": 1,
+        "title": "Next Action",
+        "type": "string"
+      }
+    },
+    "required": [
+      "item",
+      "reason",
+      "impact",
+      "next_action"
+    ],
+    "title": "MissingEvidence",
+    "type": "object"
+  },
+  "NextAction": {
+    "additionalProperties": false,
+    "properties": {
+      "description": {
+        "maxLength": 500,
+        "minLength": 1,
+        "title": "Description",
+        "type": "string"
+      },
+      "owner_hint": {
+        "anyOf": [
+          {
+            "maxLength": 120,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Owner Hint"
+      },
+      "draft_id": {
+        "anyOf": [
+          {
+            "format": "uuid",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Draft Id"
+      }
+    },
+    "required": [
+      "description"
+    ],
+    "title": "NextAction",
+    "type": "object"
+  },
   "AnalysisResult": {
     "$defs": {
       "Finding": {
@@ -279,6 +449,8 @@
             "type": "string"
           },
           "claim": {
+            "maxLength": 2000,
+            "minLength": 1,
             "title": "Claim",
             "type": "string"
           },
@@ -291,7 +463,15 @@
             "title": "Evidence Ids",
             "type": "array"
           },
+          "location": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Location",
+            "type": "string"
+          },
           "suggestion": {
+            "maxLength": 2000,
+            "minLength": 1,
             "title": "Suggestion",
             "type": "string"
           }
@@ -300,9 +480,128 @@
           "severity",
           "claim",
           "evidence_ids",
+          "location",
           "suggestion"
         ],
         "title": "Finding",
+        "type": "object"
+      },
+      "Hypothesis": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Claim",
+            "type": "string"
+          },
+          "supporting_evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Supporting Evidence Ids",
+            "type": "array"
+          },
+          "counter_evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Counter Evidence Ids",
+            "type": "array"
+          },
+          "verification_steps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Verification Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "claim"
+        ],
+        "title": "Hypothesis",
+        "type": "object"
+      },
+      "MissingEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "item": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Item",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "impact": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Impact",
+            "type": "string"
+          },
+          "next_action": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Next Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item",
+          "reason",
+          "impact",
+          "next_action"
+        ],
+        "title": "MissingEvidence",
+        "type": "object"
+      },
+      "NextAction": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "owner_hint": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Owner Hint"
+          },
+          "draft_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Draft Id"
+          }
+        },
+        "required": [
+          "description"
+        ],
+        "title": "NextAction",
         "type": "object"
       },
       "RepoScope": {
@@ -389,11 +688,25 @@
         "title": "Findings",
         "type": "array"
       },
+      "hypotheses": {
+        "items": {
+          "$ref": "#/$defs/Hypothesis"
+        },
+        "title": "Hypotheses",
+        "type": "array"
+      },
       "missing_evidence": {
         "items": {
-          "type": "string"
+          "$ref": "#/$defs/MissingEvidence"
         },
         "title": "Missing Evidence",
+        "type": "array"
+      },
+      "next_actions": {
+        "items": {
+          "$ref": "#/$defs/NextAction"
+        },
+        "title": "Next Actions",
         "type": "array"
       },
       "limitations": {
@@ -416,6 +729,236 @@
       "scope"
     ],
     "title": "AnalysisResult",
+    "type": "object"
+  },
+  "PRReviewDraft": {
+    "$defs": {
+      "Finding": {
+        "additionalProperties": false,
+        "properties": {
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "info"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "claim": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Claim",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "location": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Location",
+            "type": "string"
+          },
+          "suggestion": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Suggestion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "claim",
+          "evidence_ids",
+          "location",
+          "suggestion"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
+      "Hypothesis": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Claim",
+            "type": "string"
+          },
+          "supporting_evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Supporting Evidence Ids",
+            "type": "array"
+          },
+          "counter_evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Counter Evidence Ids",
+            "type": "array"
+          },
+          "verification_steps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Verification Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "claim"
+        ],
+        "title": "Hypothesis",
+        "type": "object"
+      },
+      "MissingEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "item": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Item",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "impact": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Impact",
+            "type": "string"
+          },
+          "next_action": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Next Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item",
+          "reason",
+          "impact",
+          "next_action"
+        ],
+        "title": "MissingEvidence",
+        "type": "object"
+      },
+      "NextAction": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "owner_hint": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Owner Hint"
+          },
+          "draft_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Draft Id"
+          }
+        },
+        "required": [
+          "description"
+        ],
+        "title": "NextAction",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "Model-facing output: coverage/freshness/scope are server-computed.",
+    "properties": {
+      "summary": {
+        "maxLength": 4000,
+        "minLength": 1,
+        "title": "Summary",
+        "type": "string"
+      },
+      "verdict": {
+        "pattern": "^(recommend_merge|hold|insufficient_evidence)$",
+        "title": "Verdict",
+        "type": "string"
+      },
+      "findings": {
+        "items": {
+          "$ref": "#/$defs/Finding"
+        },
+        "title": "Findings",
+        "type": "array"
+      },
+      "hypotheses": {
+        "items": {
+          "$ref": "#/$defs/Hypothesis"
+        },
+        "title": "Hypotheses",
+        "type": "array"
+      },
+      "missing_evidence": {
+        "items": {
+          "$ref": "#/$defs/MissingEvidence"
+        },
+        "title": "Missing Evidence",
+        "type": "array"
+      },
+      "next_actions": {
+        "items": {
+          "$ref": "#/$defs/NextAction"
+        },
+        "title": "Next Actions",
+        "type": "array"
+      },
+      "limitations": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Limitations",
+        "type": "array"
+      }
+    },
+    "required": [
+      "summary",
+      "verdict"
+    ],
+    "title": "PRReviewDraft",
     "type": "object"
   },
   "ProbeAnswer": {

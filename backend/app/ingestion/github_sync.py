@@ -27,6 +27,7 @@ from app.integrations.github.client import GitHubClient, SourceRateLimited
 from app.integrations.github.credentials import resolve_read_token
 from app.integrations.github.read_adapter import GitHubRead, Page
 from app.jobs import leases
+from app.jobs.queue import LeaseLost  # noqa: F401 - re-exported for handlers/tests
 from app.persistence.models import (
     ActivityEvent,
     CiJob,
@@ -50,10 +51,6 @@ class SyncRetry(Exception):
 
     def __init__(self, retry_after: int | None = None):
         self.retry_after = retry_after
-
-
-class LeaseLost(Exception):
-    """The job lease moved to another owner; stop without touching job state."""
 
 
 @dataclass
@@ -252,6 +249,37 @@ def sync_issues(ctx: SyncContext, cursor_row: SyncCursor, res: ResourceResult) -
     return None if res.capped else ctx.run_started_at
 
 
+def apply_pull_row(db: DBSession, repo_id: UUID, data: dict):
+    """Upsert one normalized pull request; shared by sync and live refresh.
+
+    `data` is the normalizer output; the caller resolves `body_ref` beforehand
+    when it wants the body persisted.
+    """
+    fields = {
+        key: data[key]
+        for key in (
+            "number",
+            "state",
+            "merged",
+            "draft",
+            "title",
+            "author_login",
+            "labels",
+            "base_ref",
+            "base_sha",
+            "head_ref",
+            "head_sha",
+            "html_url",
+            "source_created_at",
+            "source_updated_at",
+            "merged_at",
+        )
+    }
+    if "body_ref" in data:
+        fields["body_ref"] = data["body_ref"]
+    return _upsert(db, PullRequest, repo_id, data["external_id"], fields)
+
+
 def sync_pulls(ctx: SyncContext, cursor_row: SyncCursor, res: ResourceResult) -> datetime | None:
     watermark = _aware(cursor_row.committed_watermark)
     overlap = timedelta(minutes=ctx.settings.sync_overlap_minutes)
@@ -261,30 +289,8 @@ def sync_pulls(ctx: SyncContext, cursor_row: SyncCursor, res: ResourceResult) ->
     def handle(raw: dict) -> None:
         data = normalizers.normalize_pull(raw)
         res.fetched += 1
-        _, created = _upsert(
-            ctx.db,
-            PullRequest,
-            ctx.repo.id,
-            data["external_id"],
-            {
-                "number": data["number"],
-                "state": data["state"],
-                "merged": data["merged"],
-                "draft": data["draft"],
-                "title": data["title"],
-                "body_ref": _store_body(ctx, data["body"], "bodies"),
-                "author_login": data["author_login"],
-                "labels": data["labels"],
-                "base_ref": data["base_ref"],
-                "base_sha": data["base_sha"],
-                "head_ref": data["head_ref"],
-                "head_sha": data["head_sha"],
-                "html_url": data["html_url"],
-                "source_created_at": data["source_created_at"],
-                "source_updated_at": data["source_updated_at"],
-                "merged_at": data["merged_at"],
-            },
-        )
+        data["body_ref"] = _store_body(ctx, data["body"], "bodies")
+        _, created = apply_pull_row(ctx.db, ctx.repo.id, data)
         res.created += created
         res.updated += not created
         revision = data["source_updated_at"].isoformat() if data["source_updated_at"] else None

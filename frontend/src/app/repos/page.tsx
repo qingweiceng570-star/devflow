@@ -189,6 +189,7 @@ export default function ReposPage() {
                 <small className="muted">默认分支 {repo.default_branch || "未知"} · {repo.state === "active" ? "已启用" : "已禁用"}</small>
               </div>
               <div className="repo-actions">
+                <a className="button secondary small" href={`/repos/${repo.id}`}>进入</a>
                 <button className="button secondary small" disabled={!!busy || repo.state !== "active" || !!active} onClick={() => sync(repo)}>
                   {active ? "同步中…" : "同步"}
                 </button>

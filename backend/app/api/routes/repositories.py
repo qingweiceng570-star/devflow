@@ -83,8 +83,17 @@ def patch_repo(
             409,
             details={"current_version": repo.version},
         )
+    changed = False
     if body.state is not None and body.state != repo.state:
         repo.state = body.state
-    repo.version += 1
+        changed = True
+    if body.required_checks is not None:
+        config = dict(repo.config_json or {})
+        config["required_checks"] = [name.strip() for name in body.required_checks if name.strip()]
+        if config != (repo.config_json or {}):
+            repo.config_json = config
+            changed = True
+    if changed:
+        repo.version += 1
     db.commit()
     return envelope(repo_view(repo))

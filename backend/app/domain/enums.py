@@ -39,6 +39,38 @@ class JobStatus(StrEnum):
 
 class JobKind(StrEnum):
     SYNC = "sync"
+    ANALYZE = "analyze"
+
+
+class RunKind(StrEnum):
+    PR_REVIEW = "pr_review"
+
+
+class RunStatus(StrEnum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    RECOVERING = "recovering"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    TIMED_OUT = "timed_out"
+
+
+class EvidenceUsage(StrEnum):
+    COLLECTED = "collected"
+    CITED = "cited"
+
+
+class MessageRole(StrEnum):
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class StopReason(StrEnum):
+    BUDGET_EXHAUSTED = "budget_exhausted"
+    STEP_LIMIT = "step_limit"
+    TOOL_LIMIT = "tool_limit"
+    HEAD_CHANGED = "head_changed"
 
 
 class Coverage(StrEnum):

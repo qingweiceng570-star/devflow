@@ -11,7 +11,7 @@ _PAGE_MAX = 100
 
 
 def envelope(data):
-    return {"data": data, "meta": {"stage": "M1"}}
+    return {"data": data, "meta": {"stage": "M2"}}
 
 
 def page_limit(value: int | None) -> int:
@@ -91,4 +91,76 @@ def evidence_view(evidence) -> dict:
         "truncated": evidence.truncated,
         "observed_at": evidence.observed_at.isoformat(),
         "created_at": evidence.created_at.isoformat(),
+    }
+
+
+def conversation_view(conversation) -> dict:
+    return {
+        "id": str(conversation.id),
+        "repo_id": str(conversation.repo_id),
+        "title": conversation.title,
+        "created_at": conversation.created_at.isoformat(),
+        "updated_at": conversation.updated_at.isoformat(),
+    }
+
+
+def message_view(message) -> dict:
+    return {
+        "id": str(message.id),
+        "seq": message.seq,
+        "role": message.role,
+        "content": message.content,
+        "run_id": str(message.run_id) if message.run_id else None,
+        "created_at": message.created_at.isoformat(),
+    }
+
+
+def run_view(run, *, detail: bool = True) -> dict:
+    view = {
+        "id": str(run.id),
+        "repo_id": str(run.repo_id),
+        "conversation_id": str(run.conversation_id) if run.conversation_id else None,
+        "kind": run.kind,
+        "status": run.status,
+        "target": run.target or {},
+        "stop_reason": run.stop_reason,
+        "error": run.error,
+        "cancel_requested_at": run.cancel_requested_at.isoformat()
+        if run.cancel_requested_at
+        else None,
+        "started_at": run.started_at.isoformat() if run.started_at else None,
+        "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+        "created_at": run.created_at.isoformat(),
+        "updated_at": run.updated_at.isoformat(),
+    }
+    if detail:
+        view["result"] = run.result
+        view["partial_result"] = run.partial_result
+        view["config_snapshot"] = run.config_snapshot or {}
+    return view
+
+
+def tool_call_view(row) -> dict:
+    result = row.result or {}
+    return {
+        "id": str(row.id),
+        "tool": row.tool,
+        "status": row.status,
+        "args": row.args or {},
+        "error_code": row.error_code,
+        "duration_ms": row.duration_ms,
+        "evidence_ids": result.get("evidence_ids") or [],
+        "created_at": row.created_at.isoformat(),
+        "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+    }
+
+
+def event_view(event) -> dict:
+    return {
+        "schema_version": "1.0",
+        "run_id": str(event.run_id),
+        "seq": event.seq,
+        "type": event.type,
+        "payload": event.payload or {},
+        "timestamp": event.created_at.isoformat(),
     }
