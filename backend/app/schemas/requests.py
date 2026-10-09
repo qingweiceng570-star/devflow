@@ -46,7 +46,7 @@ class PrReviewTarget(Contract):
 
 class SubmitRunRequest(Contract):
     message: str = Field(min_length=1, max_length=64000)
-    kind: Literal["pr_review"] = "pr_review"
+    kind: Literal["pr_review", "knowledge_qa"] = "pr_review"
     target: PrReviewTarget | None = None
 
     @model_validator(mode="after")
@@ -54,3 +54,18 @@ class SubmitRunRequest(Contract):
         if self.kind == "pr_review" and self.target is None:
             raise ValueError("pr_review 需要 target.pr_number")
         return self
+
+
+class DeleteDocumentRequest(Contract):
+    expected_version: int = Field(ge=1)
+
+
+class KnowledgeSearchRequest(Contract):
+    query: str = Field(min_length=1, max_length=512)
+    source_types: list[Literal["source", "generated"]] = Field(default_factory=list, max_length=4)
+    date_from: str | None = Field(default=None, max_length=30)
+    date_to: str | None = Field(default=None, max_length=30)
+
+
+class ReindexRequest(Contract):
+    reason: str | None = Field(default=None, max_length=200)

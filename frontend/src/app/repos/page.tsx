@@ -147,7 +147,7 @@ export default function ReposPage() {
   return <WorkspaceShell
     user={user}
     active="repos"
-    note={{ stage: "M1", title: "只读同步与证据", text: "按资源增量同步，重复执行幂等；代码读取固定到具体 commit 并保留可核查证据。" }}
+    note={{ stage: "M1–M3", title: "同步 · 分析 · 知识库", text: "按资源增量同步幂等；分析取证固定到具体 commit；知识库检索带引用与通道状态。" }}
     onLogout={logout}
   >
     <header>

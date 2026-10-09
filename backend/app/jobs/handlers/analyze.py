@@ -1,14 +1,13 @@
-"""Analyze job handler: executes one PR review run (README 3.2, 11.3).
+"""Analyze job handler: executes one business run (README 3.2, 11.3, 11.5).
 
-Pipeline: refresh the target PR live and fix base/head -> prepare the bounded
-diff scope (each file captured as evidence) -> run the bounded agent loop with
-the verified tool set -> filter citations -> enforce verdict policy with a
-final head re-check -> persist the result, assistant message and terminal
-event atomically.
+Two flows share the same execution plumbing (RunExecution): pr_review
+(refresh PR -> bounded diff scope -> verify policy -> verdict) and
+knowledge_qa (route evidence between knowledge base, workspace and synced
+state -> cited answer). Citation filtering and terminal transitions are
+common.
 """
 
 import asyncio
-import json
 import logging
 from datetime import UTC, datetime
 from uuid import UUID
@@ -16,44 +15,35 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DBSession
 
-from app.agents.budget import BudgetLedger
+from app.agents.knowledge_qa import (
+    KnowledgeDraft,
+    build_question_message,
+)
+from app.agents.knowledge_qa import build_system_prompt as build_knowledge_prompt
 from app.agents.pr_review import (
     PRReviewDraft,
     build_review_request,
-    build_system_prompt,
     filter_evidence_refs,
     prepare_diff_scope,
 )
-from app.agents.runtime import AgentLoop, LoopHooks, input_fingerprint
+from app.agents.pr_review import build_system_prompt as build_review_prompt
 from app.bootstrap import create_model
-from app.context.assembler import build_initial_messages
 from app.core.config import Settings
 from app.core.errors import DomainError
 from app.domain.contracts import AnalysisResult, RepoScope
-from app.domain.enums import EvidenceUsage, RunStatus, StopReason
+from app.domain.enums import RunKind, RunStatus, StopReason
 from app.domain.policies import VerdictFacts, enforce_pr_verdict, required_checks_status
 from app.domain.scope import ExecutionContext
 from app.ingestion.github_sync import apply_pull_row, create_read_client
 from app.integrations.github import normalizers
 from app.integrations.github.credentials import resolve_read_token
 from app.integrations.github.read_adapter import GitHubRead
+from app.jobs.handlers.execution import RunExecution
 from app.jobs.queue import LeaseLost
-from app.jobs.queue import renew as renew_job
-from app.persistence.models import (
-    AgentRun,
-    CiRun,
-    Conversation,
-    Message,
-    Repository,
-    Run,
-    RunEvidence,
-    ToolCall,
-    utcnow,
-)
-from app.services import run_service
-from app.services.evidence_service import capture
+from app.persistence.models import CiRun, Conversation, Repository, Run
+from app.services import knowledge_service, run_service
 from app.storage.local import put_object
-from app.tools.executor import TOOLSET_VERSION, ToolDeps, ToolExecutor, ToolSpec
+from app.tools.executor import TOOLSET_VERSION, ToolSpec
 from app.tools.github_tools import (
     GetCiRunsInput,
     GetIssueInput,
@@ -72,6 +62,7 @@ from app.tools.github_tools import (
     list_issues,
     list_pull_requests,
 )
+from app.tools.knowledge_tools import SearchKnowledgeInput, search_knowledge
 from app.tools.workspace_tools import read_file_tool, search_code_tool
 from app.workspace.manager import WorkspaceManager
 
@@ -89,7 +80,17 @@ PR_REVIEW_TOOLS = [
     ToolSpec("search_code", "在目标 head 版本中做固定字符串搜索并生成证据。", SearchCodeInput, search_code_tool),
 ]
 
-STOP_ERRORS = {"BUDGET_EXCEEDED", "STEP_LIMIT", "TOOL_LIMIT"}
+KNOWLEDGE_QA_TOOLS = [
+    ToolSpec("search_knowledge", "在项目知识库中做混合检索（含引用、分数与降级标记）。", SearchKnowledgeInput, search_knowledge),
+    ToolSpec("read_file", "读取目标 head 版本的仓库文件（指定行范围）并生成代码证据。", ReadFileInput, read_file_tool),
+    ToolSpec("search_code", "在目标 head 版本中做固定字符串搜索并生成证据。", SearchCodeInput, search_code_tool),
+    ToolSpec("get_repo_summary", "读取仓库健康概要（已同步范围）。", RepoSummaryInput, get_repo_summary),
+    ToolSpec("get_issue", "读取单个 Issue 的描述与状态并生成证据。", GetIssueInput, get_issue),
+    ToolSpec("get_pr", "读取单个 PR 的元数据并生成证据。", GetPrInput, get_pr),
+    ToolSpec("get_ci_runs", "读取与目标 head 匹配的 CI 运行摘要。", GetCiRunsInput, get_ci_runs),
+    ToolSpec("list_issues", "分页列出 Issue 摘要。", ListIssuesInput, list_issues),
+    ToolSpec("list_pull_requests", "分页列出 PR 摘要。", ListPullsInput, list_pull_requests),
+]
 
 
 def handle_analyze(
@@ -101,6 +102,8 @@ def handle_analyze(
     client_factory=None,
     model_factory=None,
     workspace_factory=None,
+    vector_store_factory=None,
+    embedding_factory=None,
 ) -> dict:
     with db_factory() as db:
         run = db.get(Run, job.entity_id)
@@ -129,9 +132,19 @@ def handle_analyze(
             run_service.mark_running(db, run)
         except DomainError:
             return {"status": "state_changed"}
+        if run.kind == RunKind.PR_REVIEW.value:
+            flow = _execute_pr_review
+        elif run.kind == RunKind.KNOWLEDGE_QA.value:
+            flow = _execute_knowledge_qa
+        else:
+            run_service.finalize_run(
+                db, run, status=RunStatus.FAILED,
+                error={"code": "UNKNOWN_RUN_KIND", "message": f"未知分析类型 {run.kind}"},
+            )
+            return {"status": "failed"}
         try:
             return asyncio.run(
-                _execute_pr_review(
+                flow(
                     db_factory,
                     settings,
                     run_id=run.id,
@@ -141,6 +154,8 @@ def handle_analyze(
                     client_factory=client_factory,
                     model_factory=model_factory,
                     workspace_factory=workspace_factory,
+                    vector_store_factory=vector_store_factory,
+                    embedding_factory=embedding_factory,
                 )
             )
         except LeaseLost:
@@ -160,6 +175,68 @@ def handle_analyze(
             raise
 
 
+def _start_execution(
+    db_factory, settings, *, run_id, job_id, job_epoch, worker_id, client_factory
+):
+    """Load the run context and open the shared execution object."""
+    bootstrap_db = db_factory()
+    try:
+        run = bootstrap_db.get(Run, run_id)
+        repo = bootstrap_db.get(Repository, run.repo_id)
+        conversation = bootstrap_db.get(Conversation, run.conversation_id)
+        token = resolve_read_token(settings, repo.credential_ref)
+        maker = client_factory or create_read_client
+        read = GitHubRead(maker(settings, token), repo.full_name)
+        execution = RunExecution(
+            db_factory,
+            settings,
+            run=run,
+            repo=repo,
+            conversation=conversation,
+            job_id=job_id,
+            job_epoch=job_epoch,
+            worker_id=worker_id,
+        )
+        return execution, read, token
+    finally:
+        bootstrap_db.close()
+
+
+def _model_maker(model_factory):
+    return model_factory or (lambda s: create_model(s, "configured"))
+
+
+def _make_workspace(workspace_factory):
+    return workspace_factory or (lambda s, t: WorkspaceManager(s, token=t))
+
+
+async def _run_flow(
+    execution: RunExecution,
+    *,
+    messages: list[dict],
+    context_info: dict,
+    output_model,
+    specs: list[ToolSpec],
+    read,
+    workspace,
+    scratch: dict,
+    ctx: ExecutionContext,
+    agent: str,
+    model_maker,
+):
+    """Shared loop invocation with model construction and lease-safety."""
+    executor = execution.make_executor(specs, ctx=ctx, read=read, workspace=workspace, scratch=scratch)
+    try:
+        model = model_maker(execution.settings)
+    except DomainError as error:
+        execution.fail_agent(error)
+        execution.fail_run(error.code, error.message)
+        raise
+    return await execution.run_loop(
+        model, executor, messages, output_model, context_info=context_info, agent=agent
+    )
+
+
 async def _execute_pr_review(
     db_factory,
     settings: Settings,
@@ -171,113 +248,28 @@ async def _execute_pr_review(
     client_factory,
     model_factory,
     workspace_factory,
+    vector_store_factory=None,
+    embedding_factory=None,
 ) -> dict:
-    maker = client_factory or create_read_client
-    model_maker = model_factory or (lambda s: create_model(s, "configured"))
-    make_workspace = workspace_factory or (lambda s, t: WorkspaceManager(s, token=t))
-    pr_number = None
-
-    def renew_job_lease() -> bool:
-        return renew_job(
-            db_factory,
-            job_id=job_id,
-            worker_id=worker_id,
-            epoch=job_epoch,
-            lease_seconds=settings.job_lease_seconds,
-        )
-
-    with db_factory() as db:
-        run = db.get(Run, run_id)
-        repo = db.get(Repository, run.repo_id)
-        conversation = db.get(Conversation, run.conversation_id)
+    model_maker = _model_maker(model_factory)
+    make_workspace = _make_workspace(workspace_factory)
+    execution, read, token = _start_execution(
+        db_factory,
+        settings,
+        run_id=run_id,
+        job_id=job_id,
+        job_epoch=job_epoch,
+        worker_id=worker_id,
+        client_factory=client_factory,
+    )
+    db, run, repo, conversation = execution.db, execution.run, execution.repo, execution.conversation
+    try:
         pr_number = run.target.get("pr_number")
-        token = resolve_read_token(settings, repo.credential_ref)
-        read = GitHubRead(maker(settings, token), repo.full_name)
-
-        collected_ids: set[UUID] = set()
-
-        def evidence_sink(
-            *,
-            source_type: str,
-            content,
-            locator: dict,
-            source_url: str | None = None,
-            observed_at=None,
-            excerpt_limit: int = 500,
-        ) -> UUID:
-            row = capture(
-                db,
-                settings,
-                repo_id=repo.id,
-                source_type=source_type,
-                content=content,
-                locator=locator,
-                source_url=source_url,
-                observed_at=observed_at,
-                excerpt_limit=excerpt_limit,
-            )
-            if row.id not in collected_ids:
-                collected_ids.add(row.id)
-                db.add(
-                    RunEvidence(
-                        run_id=run.id, evidence_id=row.id, usage=EvidenceUsage.COLLECTED
-                    )
-                )
-                run_service.emit(
-                    db,
-                    run,
-                    "evidence.added",
-                    {"evidence_id": str(row.id), "source_type": source_type},
-                )
-                db.commit()
-            return row.id
-
-        def fail(code: str, message: str) -> None:
-            run_service.finalize_run(
-                db,
-                run,
-                status=RunStatus.FAILED,
-                error={"code": code, "message": message},
-                partial_result={"collected_evidence": len(collected_ids)},
-            )
-
-        def complete_partial(reason: str, summary: str) -> dict:
-            result = {
-                "schema_version": "1.0",
-                "kind": "pr_review",
-                "summary": summary,
-                "verdict": "insufficient_evidence",
-                "coverage": "partial",
-                "freshness": "unknown",
-                "findings": [],
-                "hypotheses": [],
-                "missing_evidence": [
-                    {
-                        "item": "分析完整性",
-                        "reason": reason,
-                        "impact": "本次运行未能完成完整审查",
-                        "next_action": "重新发起分析或缩小范围",
-                    }
-                ],
-                "next_actions": [],
-                "limitations": [reason],
-                "scope": {"actor_id": str(conversation.owner_id), "repo_id": str(repo.id)},
-            }
-            completed = run_service.finalize_run(
-                db,
-                run,
-                status=RunStatus.COMPLETED,
-                result=result,
-                stop_reason=reason,
-                assistant_text=run_service.render_assistant_text(result),
-            )
-            return {"status": "completed" if completed else "state_changed", "stop": reason}
-
         # --- refresh target PR live and fix base/head SHA (README 3.2 step 3) ---
         try:
             raw_pr = read.get_pr_live(pr_number)
         except DomainError as error:
-            fail(error.code, "无法读取目标 PR：不存在或无权访问")
+            execution.fail_run(error.code, "无法读取目标 PR：不存在或无权访问")
             raise
         pr_data = normalizers.normalize_pull(raw_pr)
         body_ref = None
@@ -286,14 +278,14 @@ async def _execute_pr_review(
                 settings.storage_root, repo.id, "bodies", pr_data["body"].encode()
             )
         pr_data["body_ref"] = body_ref
-        pr_row, _ = apply_pull_row(db, repo.id, pr_data)
+        apply_pull_row(db, repo.id, pr_data)
         db.commit()
         head_sha = pr_data["head_sha"]
         base_sha = pr_data["base_sha"]
         mergeable = raw_pr.get("mergeable")
         is_draft = bool(pr_data["draft"])
         if not head_sha or not base_sha:
-            fail("SOURCE_UNAVAILABLE", "PR 缺少可固定的版本信息")
+            execution.fail_run("SOURCE_UNAVAILABLE", "PR 缺少可固定的版本信息")
             return {"status": "failed"}
         run.target = {
             "pr_number": pr_number,
@@ -306,16 +298,11 @@ async def _execute_pr_review(
         # --- prepare the bounded diff scope; every patch becomes evidence ---
         try:
             scope = prepare_diff_scope(
-                settings,
-                read,
-                repo.full_name,
-                pr_number,
-                pr_data["html_url"],
-                head_sha,
-                evidence_sink,
+                settings, read, repo.full_name, pr_number, pr_data["html_url"], head_sha,
+                execution.evidence,
             )
         except DomainError as error:
-            fail(error.code, "无法获取 PR 差异")
+            execution.fail_run(error.code, "无法获取 PR 差异")
             raise
         scratch = {"pr_diff": scope}
 
@@ -326,22 +313,8 @@ async def _execute_pr_review(
         )
 
         # --- assemble context ---
-        user_message = db.scalar(
-            select(Message).where(
-                Message.run_id == run.id, Message.conversation_id == conversation.id
-            )
-        )
-        history_rows = db.scalars(
-            select(Message)
-            .where(
-                Message.conversation_id == conversation.id,
-                Message.seq < (run.context_through_seq or 0),
-            )
-            .order_by(Message.seq.desc())
-            .limit(settings.history_max_turns * 2)
-        ).all()
-        history_rows = list(reversed(history_rows))
-        system_prompt = build_system_prompt(repo.full_name, required_checks)
+        user_message, _history = execution.load_history()
+        system_prompt = build_review_prompt(repo.full_name, required_checks)
         review_request = build_review_request(
             {
                 "number": pr_number,
@@ -363,92 +336,19 @@ async def _execute_pr_review(
             },
             user_message.content if user_message else None,
         )
-        messages, context_info = build_initial_messages(
-            system_prompt=system_prompt,
-            history_rows=history_rows,
-            input_token_limit=settings.model_input_token_limit - settings.model_output_reserve,
-            extra_user_messages=review_request,
+        messages, context_info = execution.assemble(
+            system_prompt=system_prompt, extra_user_messages=review_request
         )
 
-        # --- trace records ---
-        agent_run = AgentRun(
-            run_id=run.id,
-            agent="pr_review",
-            model=settings.llm_model or "unconfigured",
-            input_hash=input_fingerprint(messages),
-            status="running",
-            usage={"context": context_info},
-        )
-        db.add(agent_run)
-        db.commit()
-
-        def check_stop() -> None:
-            if run_service.cancel_requested(db_factory, run.id):
-                raise DomainError("CANCELLED", "任务已取消", 409)
-            if not renew_job_lease():
-                raise LeaseLost()
-
-        ledger = BudgetLedger(db, run.id, settings.agent_total_token_budget)
-
-        def on_model_step(entry: dict) -> None:
-            pass
-
-        def on_tool_started(call, logical_call_id: UUID) -> None:
-            try:
-                args = json.loads(call.arguments)
-            except (ValueError, TypeError):
-                args = {}
-            db.add(
-                ToolCall(
-                    run_id=run.id,
-                    agent_run_id=agent_run.id,
-                    logical_call_id=logical_call_id,
-                    attempt=1,
-                    tool=call.name,
-                    args=args if isinstance(args, dict) else {},
-                    status="running",
-                )
-            )
-            run_service.emit(db, run, "tool.started", {"tool": call.name})
-            db.commit()
-
-        def on_tool_finished(call, logical_call_id: UUID, result, duration_ms: int) -> None:
-            row = db.scalar(
-                select(ToolCall)
-                .where(
-                    ToolCall.run_id == run.id, ToolCall.logical_call_id == logical_call_id
-                )
-                .limit(1)
-            )
-            if row is not None:
-                row.status = result.status
-                row.result = result.model_dump(mode="json")
-                row.error_code = result.error.code if result.error else None
-                row.duration_ms = duration_ms
-                row.finished_at = utcnow()
-            run_service.emit(
-                db,
-                run,
-                "tool.finished",
-                {
-                    "tool": call.name,
-                    "status": result.status,
-                    "error_code": result.error.code if result.error else None,
-                    "evidence_ids": [str(e) for e in result.evidence_ids],
-                },
-            )
-            db.commit()
-
-        hooks = LoopHooks(
-            check_stop=check_stop,
-            reserve_budget=ledger.reserve,
-            settle_budget=lambda tokens: (ledger.settle(tokens), db.commit()),
-            on_model_step=on_model_step,
-            on_tool_started=on_tool_started,
-            on_tool_finished=on_tool_finished,
-        )
-        deps = ToolDeps(
-            settings=settings,
+        outcome = await _run_flow(
+            execution,
+            messages=messages,
+            context_info=context_info,
+            output_model=PRReviewDraft,
+            specs=PR_REVIEW_TOOLS,
+            read=read,
+            workspace=make_workspace(settings, token),
+            scratch=scratch,
             ctx=ExecutionContext(
                 actor_id=conversation.owner_id,
                 repo_id=repo.id,
@@ -463,55 +363,14 @@ async def _execute_pr_review(
                 config_snapshot=run.config_snapshot or {},
                 lease_epoch=job_epoch,
             ),
-            repo=repo,
-            db_factory=db_factory,
-            github_read=read,
-            workspace=make_workspace(settings, token),
-            evidence=evidence_sink,
-            scratch=scratch,
+            agent="pr_review",
+            model_maker=model_maker,
         )
-        executor = ToolExecutor(PR_REVIEW_TOOLS, deps)
-        try:
-            model = model_maker(settings)
-        except DomainError as error:
-            agent_run.status = "failed"
-            agent_run.error = {"code": error.code, "message": error.message}
-            agent_run.finished_at = utcnow()
-            db.commit()
-            fail(error.code, error.message)
-            raise
-
-        try:
-            outcome = await AgentLoop(
-                model,
-                executor,
-                settings,
-                output_model=PRReviewDraft,
-                hooks=hooks,
-            ).run(messages)
-        except DomainError as error:
-            agent_run.status = "failed"
-            agent_run.error = {"code": error.code, "message": error.message}
-            agent_run.finished_at = utcnow()
-            db.commit()
-            if error.code == "CANCELLED":
-                run_service.finalize_run(db, run, status=RunStatus.CANCELLED)
-                return {"status": "cancelled"}
-            if error.code in STOP_ERRORS:
-                reason = {
-                    "BUDGET_EXCEEDED": StopReason.BUDGET_EXHAUSTED,
-                    "STEP_LIMIT": StopReason.STEP_LIMIT,
-                    "TOOL_LIMIT": StopReason.TOOL_LIMIT,
-                }[error.code]
-                return complete_partial(
-                    reason.value,
-                    "分析在预算或步数上限内未能形成完整结论；已收集的证据与工具轨迹仍可查看。",
-                )
-            fail(error.code, error.message)
-            raise
+        if isinstance(outcome, dict):
+            return outcome
 
         # --- post-processing: citations, freshness re-check, verdict policy ---
-        draft, citation_notes = filter_evidence_refs(outcome.parsed, collected_ids)
+        draft, citation_notes = filter_evidence_refs(outcome.parsed, execution.collected_ids)
         limitations = list(draft.limitations) + citation_notes
         if scope["unreviewed"]:
             note = "以下文件未获得补丁或超出预算，未纳入审查：" + ", ".join(
@@ -536,14 +395,11 @@ async def _execute_pr_review(
             limitations.append("输出前无法复查 PR 版本")
 
         coverage = "complete" if scope["coverage"]["complete"] else "partial"
-        coverage_note = None
         if coverage == "partial":
             if scope["coverage"]["capped_files"]:
-                coverage_note = "文件数达到分析上限"
+                limitations.append("文件数达到分析上限")
             elif scope["coverage"]["capped_bytes"]:
-                coverage_note = "变更正文达到分析上限"
-            if coverage_note:
-                limitations.append(coverage_note)
+                limitations.append("变更正文达到分析上限")
 
         facts = VerdictFacts(
             blocking_findings=sum(
@@ -559,10 +415,7 @@ async def _execute_pr_review(
         )
         final_verdict, hard_reasons, gap_reasons = enforce_pr_verdict(draft.verdict, facts)
         if final_verdict != draft.verdict:
-            limitations.append(
-                "结论按规则降级："
-                + "；".join(hard_reasons + gap_reasons)
-            )
+            limitations.append("结论按规则降级：" + "；".join(hard_reasons + gap_reasons))
         if checks_configured and checks_detail:
             limitations.extend(f"必需检查：{item}" for item in checks_detail[:10])
 
@@ -579,48 +432,124 @@ async def _execute_pr_review(
             limitations=limitations,
             scope=RepoScope(actor_id=conversation.owner_id, repo_id=repo.id),
         )
-        result_dict = result.model_dump(mode="json")
-
-        # One "cited" binding per distinct evidence id, even when several
-        # findings reuse the same evidence (uq_run_evidence_binding).
-        cited_ids: set[UUID] = set()
-        for finding in result.findings:
-            cited_ids.update(finding.evidence_ids)
-        for evidence_id in cited_ids:
-            if evidence_id in collected_ids:
-                db.add(
-                    RunEvidence(
-                        run_id=run.id,
-                        evidence_id=evidence_id,
-                        usage=EvidenceUsage.CITED,
-                    )
-                )
-        agent_run.status = "succeeded"
-        agent_run.usage = {
-            "input_hash": agent_run.input_hash,
-            "total_tokens": outcome.total_tokens,
-            "estimated": outcome.usage_estimated,
-            "model_steps": outcome.model_steps,
-            "tool_calls": outcome.tool_calls,
-            "context": context_info,
-        }
-        agent_run.finished_at = utcnow()
-        db.commit()
-
-        completed = run_service.finalize_run(
-            db,
-            run,
-            status=RunStatus.COMPLETED,
-            result=result_dict,
-            stop_reason=stop_reason,
-            assistant_text=run_service.render_assistant_text(result_dict),
+        return execution.finalize_success(
+            result, stop_reason=stop_reason, outcome=outcome, context_info=context_info
         )
-        return {
-            "status": "completed" if completed else "state_changed",
-            "verdict": final_verdict,
-            "coverage": coverage,
-            "tool_calls": outcome.tool_calls,
+    finally:
+        execution.close()
+
+
+async def _execute_knowledge_qa(
+    db_factory,
+    settings: Settings,
+    *,
+    run_id: UUID,
+    job_id: UUID,
+    job_epoch: int,
+    worker_id: str,
+    client_factory,
+    model_factory,
+    workspace_factory,
+    vector_store_factory=None,
+    embedding_factory=None,
+) -> dict:
+    model_maker = _model_maker(model_factory)
+    make_workspace = _make_workspace(workspace_factory)
+    execution, read, token = _start_execution(
+        db_factory,
+        settings,
+        run_id=run_id,
+        job_id=job_id,
+        job_epoch=job_epoch,
+        worker_id=worker_id,
+        client_factory=client_factory,
+    )
+    db, run, repo, conversation = execution.db, execution.run, execution.repo, execution.conversation
+    try:
+        user_message, _history = execution.load_history()
+        if user_message is None:
+            execution.fail_run("RUN_CONTEXT_MISSING", "缺少用户消息")
+            return {"status": "failed"}
+
+        # Fix the default-branch head for code reads; failure degrades to
+        # database/knowledge tools only (the run continues).
+        head_sha = None
+        if repo.default_branch:
+            try:
+                head_sha = read.get_branch_head(repo.default_branch)
+            except DomainError:
+                head_sha = None
+        index_summary = knowledge_service.index_status(db, repo.id)
+        active = index_summary.get("active_generation")
+        system_prompt = build_knowledge_prompt(
+            repo.full_name,
+            {
+                "generation_id": active["id"] if active else None,
+                "chunk_count": active["chunk_count"] if active else 0,
+            },
+        )
+        question_messages = build_question_message(user_message.content, index_summary)
+        messages, context_info = execution.assemble(
+            system_prompt=system_prompt, extra_user_messages=question_messages
+        )
+
+        scratch = {
+            "vector_store_factory": vector_store_factory,
+            "embedding_factory": embedding_factory,
         }
+        outcome = await _run_flow(
+            execution,
+            messages=messages,
+            context_info=context_info,
+            output_model=KnowledgeDraft,
+            specs=KNOWLEDGE_QA_TOOLS,
+            read=read,
+            workspace=make_workspace(settings, token),
+            scratch=scratch,
+            ctx=ExecutionContext(
+                actor_id=conversation.owner_id,
+                repo_id=repo.id,
+                credential_ref=repo.credential_ref,
+                run_id=run.id,
+                conversation_id=conversation.id,
+                head_sha=head_sha,
+                prompt_version="knowledge_qa.v1",
+                toolset_version=TOOLSET_VERSION,
+                config_snapshot=run.config_snapshot or {},
+                lease_epoch=job_epoch,
+            ),
+            agent="knowledge_qa",
+            model_maker=model_maker,
+        )
+        if isinstance(outcome, dict):
+            return outcome
+
+        draft, citation_notes = filter_evidence_refs(outcome.parsed, execution.collected_ids)
+        limitations = list(draft.limitations) + citation_notes
+        if context_info["history_trimmed"]:
+            limitations.append("更早的对话历史因预算被省略")
+        if not active:
+            limitations.append("知识库尚未建立索引，历史资料检索不可用")
+
+        has_evidence = bool(execution.collected_ids)
+        result = AnalysisResult(
+            kind="knowledge_qa",
+            summary=draft.summary,
+            verdict="not_applicable",
+            coverage="complete" if has_evidence else "unavailable",
+            freshness="fresh" if (active and not index_summary.get("pending_changes")) else "unknown",
+            findings=draft.findings,
+            hypotheses=draft.hypotheses,
+            missing_evidence=draft.missing_evidence,
+            next_actions=draft.next_actions,
+            limitations=limitations,
+            scope=RepoScope(actor_id=conversation.owner_id, repo_id=repo.id),
+        )
+        return execution.finalize_success(
+            result, stop_reason=None, outcome=outcome, context_info=context_info
+        )
+    finally:
+        execution.close()
 
 
 def _ci_run_dicts(db: DBSession, repo_id: UUID, head_sha: str) -> list[dict]:

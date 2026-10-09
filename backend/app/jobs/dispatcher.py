@@ -3,13 +3,8 @@ from app.core.errors import DomainError
 from app.domain.enums import JobKind
 from app.ingestion.github_sync import SyncRetry, run_sync
 from app.jobs.handlers.analyze import handle_analyze
-
-
-class HandlerRetry(Exception):
-    """Handler asks the queue to schedule a retry (retry_after in seconds)."""
-
-    def __init__(self, retry_after: int | None = None):
-        self.retry_after = retry_after
+from app.jobs.handlers.index import handle_index
+from app.jobs.queue import HandlerRetry  # re-exported for handlers and tests
 
 
 def handle_sync(db_factory, settings: Settings, job, worker_id: str, client_factory=None) -> dict:
@@ -30,6 +25,7 @@ def handle_sync(db_factory, settings: Settings, job, worker_id: str, client_fact
 HANDLERS = {
     JobKind.SYNC: handle_sync,
     JobKind.ANALYZE: handle_analyze,
+    JobKind.INDEX: handle_index,
 }
 
 

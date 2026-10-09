@@ -11,7 +11,7 @@ _PAGE_MAX = 100
 
 
 def envelope(data):
-    return {"data": data, "meta": {"stage": "M2"}}
+    return {"data": data, "meta": {"stage": "M3"}}
 
 
 def page_limit(value: int | None) -> int:
@@ -163,4 +163,34 @@ def event_view(event) -> dict:
         "type": event.type,
         "payload": event.payload or {},
         "timestamp": event.created_at.isoformat(),
+    }
+
+
+def document_view(document) -> dict:
+    return {
+        "id": str(document.id),
+        "repo_id": str(document.repo_id),
+        "source_key": document.source_key,
+        "origin": document.origin,
+        "title": document.title,
+        "state": document.state,
+        "version": document.version,
+        "byte_size": document.byte_size,
+        "source_revision": document.source_revision,
+        "current_version_id": str(document.current_version_id)
+        if document.current_version_id
+        else None,
+        "created_at": document.created_at.isoformat(),
+        "updated_at": document.updated_at.isoformat(),
+        "deleted_at": document.deleted_at.isoformat() if document.deleted_at else None,
+    }
+
+
+def document_version_view(version) -> dict:
+    return {
+        "id": str(version.id),
+        "content_hash": version.content_hash,
+        "source_revision": version.source_revision,
+        "parser_version": version.parser_version,
+        "created_at": version.created_at.isoformat(),
     }

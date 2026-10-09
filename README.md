@@ -1,12 +1,14 @@
 # DevFlow AI：多智能体研发协作助手
 
-> 自主实现版 · 详细设计基线 v0.5 / M2 工程交付 · 2026-10-09
+> 自主实现版 · 详细设计基线 v0.6 / M3 工程交付 · 2026-10-09
 >
 > **M0 已实现：** FastAPI/Next.js 工程、PostgreSQL 迁移、本地管理员登录、CSRF、Worker 心跳、OpenAI 兼容适配器、受控工具循环、三个离线样例和验证面板。真实模型已接入（DeepSeek）并通过能力探测；GitHub 同步与业务分析从 M1/M2 开始。后文 M1–M7 的目录与功能仍是设计契约，不表示已经实现。
 >
 > **M1 已实现：** GitHub 只读接入与增量同步（水位/ETag/限流重试/幂等）、PostgreSQL 租约 Job 队列与崩溃恢复、固定 SHA 代码工作区、证据采集与查询接口、前端仓库页（/repos）。真实仓库验收见 [M1 验收](docs/demos/m1-acceptance.md)，边界决策见 [ADR 0003](docs/adr/0003-m1-sync-queue-workspace.md)。业务分析（ChatAgent/SSE/RAG/多 Agent）从 M2 开始。
 >
 > **M2 已实现：** 会话与运行生命周期（原子提交、活动运行唯一、取消竞态裁决）、通用 Agent Loop（探针与业务共用）、PR 审查工具集（diff 准备与优先排序、固定 SHA 代码读取、CI 匹配）、引用校验与裁决规则（只降级）、SSE 进度与断线恢复、聊天/运行/证据前端。真实 PR #16 闭环验收见 [M2 验收](docs/demos/m2-acceptance.md)，决策见 [ADR 0004](docs/adr/0004-m2-run-pipeline.md)。Issue/CI 专用 Agent、多 Agent 工作流、RAG、记忆从 M3–M6 起。
+>
+> **M3 已实现：** 文档上传与结构感知切分（zh-en.v1 分词器、600/900/80 token 结构块）、BM25+可选向量混合检索（RRF 融合、DB 回查权威过滤、单路降级语义）、索引代与 Outbox（全量重建、原子激活、代际回收）、召回测试页、搜索知识工具与知识问答模式（引用可追溯到文档版本与行号）。真实文档闭环验收见 [M3 验收](docs/demos/m3-acceptance.md)，决策见 [ADR 0005](docs/adr/0005-m3-rag.md)。专用 Agent、多 Agent 工作流、记忆从 M4–M6 起。
 >
 > 实际使用见 [启动指南](docs/development.md)，验收记录见 [M0 验收](docs/demos/m0-acceptance.md)。所有初始限制都是可配置的工程起点，不是模型质量或生产性能承诺。
 >
@@ -1517,7 +1519,8 @@ MVP 不需要先实现全部 RAG、所有 Agent、MCP 或复杂多用户系统�
 - [x] 配置真实模型服务（DeepSeek `deepseek-chat`）并执行能力探测：三个样例全部通过（见 [验收记录补记](docs/demos/m0-acceptance.md)、[ADR 0002](docs/adr/0002-structured-output-transport.md)）。
 - [x] 接入真实 GitHub 仓库并完成 M1 验收：simonw/ttok 增量同步（幂等/水位/ETag/限流重试）、租约队列与恢复（真实 PostgreSQL 并发用例）、固定 SHA 读取与证据核查、仓库页 e2e（见 [M1 验收记录](docs/demos/m1-acceptance.md)）。
 - [x] 完成 M2：ChatAgent 受控工具循环、PR 审查闭环（裁决规则/引用校验/新鲜度复查）、业务 SSE 与运行轨迹、聊天/运行/证据前端；真实 PR 闭环验收（见 [M2 验收记录](docs/demos/m2-acceptance.md)）。
-- [ ] 完成 M3–M7：RAG、专用 Agent、多 Agent 工作流、记忆/周报/草稿、扩展与交付。
+- [x] 完成 M3：文档接入与结构感知切分、BM25（可扩展向量）混合检索与 RRF、索引代/Outbox 一致性、召回测试页与知识问答；真实文档闭环验收（见 [M3 验收记录](docs/demos/m3-acceptance.md)）。
+- [ ] 完成 M4–M7：专项 Agent、多 Agent 工作流、记忆/周报/草稿、扩展与交付。
 
 M0 已运行应用测试和浏览器验收，并完成 PostgreSQL 迁移与 Schema 一致性检查；结果见 [验收记录](docs/demos/m0-acceptance.md)。尚未调用真实模型分析仓库、执行 GitHub 写操作或进行质量/性能评测。M0 的能力探测是有界诊断请求，不是持久化业务 Run；Worker 暂仅提供心跳，业务队列在 M1 接入。
 

@@ -1,10 +1,12 @@
-# M0–M2 本地开发与启动
+# M0–M3 本地开发与启动
 
 M0 提供登录和模型工具协议验证。三个样例是人工构造的数据，不连接 GitHub，也不输出真实 PR 的合入判断。真实模型适配已实现；当前配置为 DeepSeek（`deepseek-chat`），离线模式仍可随时回退。
 
 M1 增加 GitHub 只读接入与增量同步、持久化 Job 队列（Worker 执行）、固定 SHA 代码工作区与证据查询，前端新增仓库页（/repos）。验收记录见 [M1 验收](demos/m1-acceptance.md)。
 
 M2 提供 PR 审查闭环：会话与运行、ChatAgent 受控工具循环、证据引用校验、裁决规则、SSE 进度与聊天前端。验收记录见 [M2 验收](demos/m2-acceptance.md)，决策见 [ADR 0004](adr/0004-m2-run-pipeline.md)。
+
+M3 提供知识库：文档上传与结构感知切分、BM25（+可选向量）混合检索与 RRF、索引代与 Outbox、召回测试页、`search_knowledge` 工具与知识问答模式。验收记录见 [M3 验收](demos/m3-acceptance.md)，决策见 [ADR 0005](adr/0005-m3-rag.md)。
 
 ## 环境与锁文件
 
@@ -215,6 +217,27 @@ API 主线（均需登录 Cookie；写操作需 `Origin` 与 `X-CSRF-Token`）�
 
 Next.js 代理对 `Accept: text/event-stream` 的请求透传流式响应（不缓冲、不加 65 秒超时）；普通请求仍为有界缓冲。若绕过 Next 直连 8100，前端需自行处理 CORS 与 Cookie。
 
+## M3：知识库与检索
+
+### 使用方式
+
+浏览器：仓库总览 → 「知识库」→ 上传文档（.md/.markdown/.txt，≤5 MiB）→ 自动触发索引 → 「召回测试」框检索并查看通道 trace。会话页的「类型」选择「知识问答」即可进行带引用的项目问答。
+
+API 主线：
+
+- `POST /api/v1/repos/{id}/documents`（multipart，可选 `source_revision`）→ 202；同内容重传 `changed=false`
+- `GET /api/v1/repos/{id}/documents` / `GET /api/v1/documents/{id}`（版本与块数）
+- `DELETE /api/v1/documents/{id}`（body `expected_version`；tombstone 后检索立即排除，重建清理异步进行）
+- `POST /api/v1/repos/{id}/knowledge/search`（只检索不建运行，返回结果 + 完整 trace）
+- `GET /api/v1/repos/{id}/knowledge/status` / `POST /api/v1/repos/{id}/knowledge/reindex`
+
+### 索引与降级
+
+- 每次内容变更写 Outbox 行并入队 index Job（Worker 执行，全量重建索引代，激活时旧代转 superseded，最多保留两代）。
+- 只接受 UTF-8 Markdown/纯文本；PDF 等格式明确拒绝（415）。目标 600/上限 900/重叠 80 token 的结构感知切分；分词器 `zh-en.v1`（英文标识符保留+拆词、中文 bigram）与切分器版本随索引代记录。
+- 向量通道可选：`uv sync --group knowledge` 安装 pymilvus，`docker compose --profile knowledge up -d` 启动 Milvus，配置 `EMBEDDING_BASE_URL/MODEL`（OpenAI 兼容 /embeddings）与 `MILVUS_URI` 后重建索引。未配置时 BM25 单路运行并在页面/接口显式标记 `not_configured`；通道故障时标 `*_unavailable` 降级，双路故障返回 `RETRIEVAL_UNAVAILABLE`。
+- 删除/过滤在 DB 回查层即时生效，不依赖重建；历史文档引用固定到 document_version，不会被最新正文静默替换。
+
 ## 常见问题
 
 - 503 DATABASE_NOT_READY：启动数据库并执行迁移；不要在 API 启动时自动 `create_all`。
@@ -228,4 +251,4 @@ Next.js 代理对 `Accept: text/event-stream` 的请求透传流式响应（不�
 
 ## 当前边界
 
-M1 已实现：GitHub 只读接入、增量同步（水位/ETag/限流重试/幂等）、PostgreSQL 租约队列与恢复、固定 SHA 代码工作区、证据采集与查询、仓库页。M2 已实现：会话与运行、ChatAgent 受控工具循环（PR 审查九件套工具）、结构化结论与引用校验、裁决规则、SSE 与聊天前端。未实现：Issue/CI 专用 Agent、多 Agent 工作流、RAG、记忆与摘要压缩、周报、外部写操作——按 README 的 M3–M7 顺序实现。
+M1 已实现：GitHub 只读接入、增量同步（水位/ETag/限流重试/幂等）、PostgreSQL 租约队列与恢复、固定 SHA 代码工作区、证据采集与查询、仓库页。M2 已实现：会话与运行、ChatAgent 受控工具循环（PR 审查九件套工具）、结构化结论与引用校验、裁决规则、SSE 与聊天前端。M3 已实现：文档上传与结构感知切分、BM25+可选向量混合检索（RRF、DB 回查过滤、单路降级）、索引代与 Outbox、召回测试页、知识问答模式。未实现：专项 Issue/CI Agent、多 Agent 工作流、Rerank、记忆与摘要压缩、周报、MCP/Skill、外部写操作——按 README 的 M4–M7 顺序实现。

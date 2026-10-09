@@ -7,6 +7,14 @@ from app.persistence.models.base import utcnow
 from app.persistence.models.evidence import Evidence, IdempotencyRecord, SourceSnapshot
 from app.persistence.models.identity import Probe, Session, User, WorkerHeartbeat
 from app.persistence.models.jobs import Job, ResourceLease
+from app.persistence.models.knowledge import (
+    Chunk,
+    Document,
+    DocumentVersion,
+    IndexGeneration,
+    IndexMembership,
+    IndexOutbox,
+)
 from app.persistence.models.repository import (
     ActivityEvent,
     CiJob,
@@ -33,11 +41,17 @@ __all__ = [
     "ActivityEvent",
     "AgentRun",
     "BudgetAccount",
+    "Chunk",
     "CiJob",
     "CiRun",
     "Conversation",
+    "Document",
+    "DocumentVersion",
     "Evidence",
     "IdempotencyRecord",
+    "IndexGeneration",
+    "IndexMembership",
+    "IndexOutbox",
     "Issue",
     "Job",
     "Message",

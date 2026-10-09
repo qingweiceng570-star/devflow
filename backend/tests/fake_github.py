@@ -228,6 +228,10 @@ class FakeGitHub:
 
         if path == f"/repos/{self.full_name}":
             return httpx.Response(200, json=self.repo_payload())
+        if path.startswith(f"/repos/{self.full_name}/branches/"):
+            return httpx.Response(
+                200, json={"name": path.rsplit("/", 1)[-1], "commit": {"sha": self.head_sha}}
+            )
         if path == f"/repos/{self.full_name}/issues":
             state = (query.get("state") or ["open"])[0]
             return httpx.Response(

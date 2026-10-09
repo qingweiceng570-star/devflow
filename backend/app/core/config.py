@@ -41,6 +41,23 @@ class Settings(BaseSettings):
     # Cumulative model-visible tool output per run (bounds context growth until
     # the M6 context budgeter takes over).
     tool_bytes_total_limit: int = Field(default=262144, ge=16384, le=4194304)
+    # Knowledge base (M3): documents, embeddings, vector store and retrieval.
+    max_document_bytes: int = Field(default=5242880, ge=1024, le=20971520)
+    embedding_base_url: str = ""
+    embedding_model: str = ""
+    embedding_api_key: SecretStr = SecretStr("")
+    embedding_dimension: int = Field(default=1024, ge=64, le=4096)
+    embedding_timeout_seconds: float = Field(default=30, ge=5, le=120)
+    embedding_batch_size: int = Field(default=32, ge=1, le=64)
+    milvus_uri: str = ""
+    rerank_model: str = ""
+    rag_chunk_target_tokens: int = Field(default=600, ge=100, le=2000)
+    rag_chunk_max_tokens: int = Field(default=900, ge=100, le=3000)
+    rag_chunk_overlap_tokens: int = Field(default=80, ge=0, le=400)
+    rag_top_k_per_channel: int = Field(default=20, ge=1, le=100)
+    rag_rerank_k: int = Field(default=20, ge=1, le=100)
+    rag_final_k: int = Field(default=6, ge=1, le=50)
+    bm25_max_chunks_per_repo: int = Field(default=50000, ge=100, le=200000)
     worker_heartbeat_seconds: int = Field(default=10, ge=1, le=30)
     github_read_token: SecretStr = SecretStr("")
     github_write_token: SecretStr = SecretStr("")
@@ -86,7 +103,7 @@ class Settings(BaseSettings):
             raise ValueError("APP_ORIGIN must contain only scheme and host/port")
         return value.rstrip("/")
 
-    @field_validator("llm_base_url", "github_api_base", "github_git_proxy")
+    @field_validator("llm_base_url", "github_api_base", "github_git_proxy", "embedding_base_url", "milvus_uri")
     @classmethod
     def valid_model_url(cls, value: str) -> str:
         if not value:
@@ -118,6 +135,14 @@ class Settings(BaseSettings):
         return self.llm_provider == "fixture" or bool(
             self.llm_base_url and self.llm_model and self.llm_api_key.get_secret_value()
         )
+
+    @property
+    def embedding_configured(self) -> bool:
+        return bool(self.embedding_base_url and self.embedding_model)
+
+    @property
+    def vector_configured(self) -> bool:
+        return bool(self.milvus_uri and self.embedding_configured)
 
 
 @lru_cache

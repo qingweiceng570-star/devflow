@@ -25,3 +25,24 @@ export async function api<T>(path: string, body?: unknown, method?: string): Pro
   if (!response.ok) throw new ApiError(payload.error?.code || "REQUEST_FAILED", payload.error?.message || "请求未完成", response.status);
   return payload.data as T;
 }
+
+export async function apiUpload<T>(path: string, file: File, fields?: Record<string, string>): Promise<T> {
+  const form = new FormData();
+  form.append("file", file);
+  for (const [key, value] of Object.entries(fields || {})) form.append(key, value);
+  let response: Response;
+  try {
+    response = await fetch(`/api/v1${path}`, {
+      method: "POST", credentials: "same-origin", body: form,
+      headers: { "X-CSRF-Token": decodeURIComponent(csrfToken()) },
+      signal: AbortSignal.timeout(65000),
+    });
+  } catch {
+    throw new ApiError("NETWORK_ERROR", "上传失败：无法连接服务", 0);
+  }
+  let payload;
+  try { payload = await response.json(); }
+  catch { throw new ApiError("INVALID_RESPONSE", "服务返回格式不正确", response.status); }
+  if (!response.ok) throw new ApiError(payload.error?.code || "REQUEST_FAILED", payload.error?.message || "上传未完成", response.status);
+  return payload.data as T;
+}

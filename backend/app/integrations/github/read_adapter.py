@@ -101,6 +101,10 @@ class GitHubRead:
         """Fresh PR metadata for fixing base/head at analysis start (README 3.2)."""
         return self.client.get(f"/repos/{self.full_name}/pulls/{number}").data
 
+    def get_branch_head(self, branch: str) -> str | None:
+        data = self.client.get(f"/repos/{self.full_name}/branches/{branch}").data
+        return (data.get("commit") or {}).get("sha")
+
     def list_events(self, cursor: str | None = None, etag: str | None = None) -> Page:
         if cursor:
             page = self.client.get(cursor)

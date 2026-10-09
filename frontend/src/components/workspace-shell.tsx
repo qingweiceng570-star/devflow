@@ -4,13 +4,14 @@ import type { ReactNode } from "react";
 
 type ShellProps = {
   user: { username: string; role: string } | null;
-  active: "dashboard" | "repos";
+  active: "dashboard" | "repos" | "knowledge";
   note: { stage: string; title: string; text: string };
+  knowledgeHref?: string;
   onLogout: () => void;
   children: ReactNode;
 };
 
-export default function WorkspaceShell({ user, active, note, onLogout, children }: ShellProps) {
+export default function WorkspaceShell({ user, active, note, knowledgeHref, onLogout, children }: ShellProps) {
   return (
     <div className="workspace">
       <aside className="sidebar">
@@ -24,9 +25,15 @@ export default function WorkspaceShell({ user, active, note, onLogout, children 
         <a className={`nav-item ${active === "repos" ? "active" : ""}`} href="/repos">
           ⌘ &nbsp; 仓库协作
         </a>
-        <div className="nav-item disabled">
-          ▤ &nbsp; 知识库 <span>M3</span>
-        </div>
+        {knowledgeHref ? (
+          <a className={`nav-item ${active === "knowledge" ? "active" : ""}`} href={knowledgeHref}>
+            ▤ &nbsp; 知识库
+          </a>
+        ) : (
+          <div className="nav-item disabled">
+            ▤ &nbsp; 知识库 <span>进入仓库后可用</span>
+          </div>
+        )}
         <div className="sidebar-note">
           <span className="pill">{note.stage}</span>
           <strong>{note.title}</strong>

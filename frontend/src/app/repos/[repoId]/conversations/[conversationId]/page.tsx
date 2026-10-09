@@ -48,6 +48,7 @@ export default function ConversationPage() {
   const [run, setRun] = useState<RunView | null>(null);
   const [trace, setTrace] = useState<ToolTrace[]>([]);
   const [prNumber, setPrNumber] = useState("");
+  const [kind, setKind] = useState<"pr_review" | "knowledge_qa">("pr_review");
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -126,16 +127,20 @@ export default function ConversationPage() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    const prValue = Number(prNumber);
     if (!draft.trim()) return;
-    if (!Number.isInteger(prValue) || prValue < 1) {
-      setError("请输入有效的 PR 编号");
-      return;
+    let target: { pr_number: number } | null = null;
+    if (kind === "pr_review") {
+      const prValue = Number(prNumber);
+      if (!Number.isInteger(prValue) || prValue < 1) {
+        setError("请输入有效的 PR 编号");
+        return;
+      }
+      target = { pr_number: prValue };
     }
     setBusy(true); setError("");
     try {
       const created = await api<RunView>(`/conversations/${conversationId}/runs`, {
-        message: draft.trim(), kind: "pr_review", target: { pr_number: prValue },
+        message: draft.trim(), kind, ...(target ? { target } : {}),
       });
       setDraft("");
       setRun(created);
@@ -166,7 +171,8 @@ export default function ConversationPage() {
   return <WorkspaceShell
     user={user}
     active="repos"
-    note={{ stage: "M2", title: "带证据的审查结论", text: "结论、风险与依据逐条给出；所有引用都能追溯到本次运行收集的证据。" }}
+    knowledgeHref={`/repos/${repoId}/knowledge`}
+    note={{ stage: "M3", title: "带证据的结论", text: "PR 审查与知识问答共用同一套取证链路；引用可追溯到本次运行收集的证据。" }}
     onLogout={logout}
   >
     <header>
@@ -191,16 +197,25 @@ export default function ConversationPage() {
         <div ref={bottomRef} />
       </div>
       <form className="chat-form" onSubmit={submit}>
-        <label htmlFor="pr-number" className="chat-pr-label">PR 编号
-          <input id="pr-number" value={prNumber} onChange={(event) => setPrNumber(event.target.value)}
-            placeholder="例如 22" inputMode="numeric" disabled={running} />
+        <label htmlFor="chat-kind" className="chat-kind-label">类型
+          <select id="chat-kind" value={kind} onChange={(event) => setKind(event.target.value as "pr_review" | "knowledge_qa")} disabled={running}>
+            <option value="pr_review">PR 审查</option>
+            <option value="knowledge_qa">知识问答</option>
+          </select>
         </label>
+        {kind === "pr_review" && (
+          <label htmlFor="pr-number" className="chat-pr-label">PR 编号
+            <input id="pr-number" value={prNumber} onChange={(event) => setPrNumber(event.target.value)}
+              placeholder="例如 22" inputMode="numeric" disabled={running} />
+          </label>
+        )}
         <label htmlFor="chat-input" className="chat-input-label">关注点
           <textarea id="chat-input" value={draft} onChange={(event) => setDraft(event.target.value)}
-            placeholder="例如：这个 PR 有哪些风险？可以合入吗？" rows={2} disabled={running} />
+            placeholder={kind === "pr_review" ? "例如：这个 PR 有哪些风险？可以合入吗？" : "例如：写操作的权限要求是什么？"}
+            rows={2} disabled={running} />
         </label>
         <button className="button primary" disabled={busy || running || !draft.trim()}>
-          {running ? "分析进行中…" : busy ? "正在提交…" : "提交分析"}
+          {running ? "分析进行中…" : busy ? "正在提交…" : kind === "pr_review" ? "提交分析" : "提交提问"}
         </button>
       </form>
     </section>
@@ -217,7 +232,9 @@ function RunCard({ run, trace }: { run: RunView; trace: ToolTrace[] }) {
     <div className="run-head">
       <span className={`tag ${run.status === "failed" ? "tag-warn" : ""}`}>{statusNames[run.status] || run.status}</span>
       {run.stop_reason && <span className="tag">停止原因：{run.stop_reason}</span>}
-      {result && <span className={`verdict verdict-${result.verdict}`}>{verdictNames[result.verdict] || result.verdict}</span>}
+      {result && result.verdict !== "not_applicable" && (
+        <span className={`verdict verdict-${result.verdict}`}>{verdictNames[result.verdict] || result.verdict}</span>
+      )}
     </div>
     {activeStatus(run.status) && (
       <div className="progress" role="status">

@@ -18,6 +18,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ValidationError
 
+from app.context.budgeter import estimate_tokens
 from app.core.config import Settings
 from app.core.errors import DomainError
 from app.domain.contracts import ToolResult
@@ -113,8 +114,10 @@ class AgentLoop:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise DomainError("AGENT_TIMEOUT", "工具循环超时", 504)
-            # Conservative upper-bound reservation before any external call.
-            estimate = len(json.dumps(messages, ensure_ascii=False)) + len(
+            # Conservative upper-bound reservation using the shared estimator
+            # (chars/2): raw JSON length would overshoot ~2x for content-heavy
+            # tool results and falsely exhaust the budget.
+            estimate = estimate_tokens(json.dumps(messages, ensure_ascii=False)) + estimate_tokens(
                 json.dumps(self.tools.schemas, ensure_ascii=False)
             )
             reservation = estimate + self.settings.model_output_token_limit

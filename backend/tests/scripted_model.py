@@ -62,6 +62,8 @@ class ScriptedModel:
         if "content_with_evidence" in step:
             spec = step["content_with_evidence"]
             answer = pr_review_answer(verdict=spec.get("verdict", "insufficient_evidence"))
+            if step.get("no_verdict"):
+                answer.pop("verdict")  # e.g. KnowledgeDraft has no verdict field
             for key, value in spec.items():
                 if key not in {"severity", "claim", "location", "verdict"}:
                     answer[key] = value

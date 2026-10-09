@@ -28,6 +28,13 @@ class LeaseLost(Exception):
     touching job state (recovery owns the row now)."""
 
 
+class HandlerRetry(Exception):
+    """Handler asks the queue to schedule a retry (retry_after in seconds)."""
+
+    def __init__(self, retry_after: int | None = None):
+        self.retry_after = retry_after
+
+
 def default_max_attempts(settings) -> int:
     return settings.job_max_attempts
 

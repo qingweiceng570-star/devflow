@@ -16,10 +16,12 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     if (value) headers.set(name, value);
   }
   const wantsStream = (request.headers.get("accept") || "").includes("text/event-stream");
+  const isMultipart = (request.headers.get("content-type") || "").includes("multipart/form-data");
+  const bodyLimit = isMultipart ? 6 * 1024 * 1024 : 1024 * 1024;
   try {
     const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
-    if (body && body.byteLength > 1024 * 1024) {
-      return Response.json({ error: { code: "PAYLOAD_TOO_LARGE", message: "请求不能超过 1 MiB", retryable: false } }, { status: 413 });
+    if (body && body.byteLength > bodyLimit) {
+      return Response.json({ error: { code: "PAYLOAD_TOO_LARGE", message: `请求不能超过 ${bodyLimit / (1024 * 1024)} MiB`, retryable: false } }, { status: 413 });
     }
     // SSE connections stay open for the life of a run; only bounded JSON
     // requests get the short timeout (README 19, ADR 0004).

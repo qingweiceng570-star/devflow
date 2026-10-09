@@ -9,9 +9,11 @@ from fastapi.responses import JSONResponse
 from app.api.routes import (
     auth,
     conversations,
+    documents,
     evidence,
     health,
     jobs,
+    knowledge,
     repositories,
     runs,
     sync,
@@ -130,6 +132,8 @@ def create_app(settings: Settings | None = None, *, session_factory=None, model_
         evidence,
         conversations,
         runs,
+        documents,
+        knowledge,
     ):
         app.include_router(module.router, prefix="/api/v1")
 

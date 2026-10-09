@@ -33,7 +33,7 @@ def capabilities(request: Request, identity=Depends(current_identity), db=Depend
     )
     return envelope(
         {
-            "stage": "M2",
+            "stage": "M3",
             "configured_provider": settings.llm_provider,
             "model_configured": settings.model_configured,
             "model": settings.llm_model or None,

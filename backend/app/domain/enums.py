@@ -40,10 +40,12 @@ class JobStatus(StrEnum):
 class JobKind(StrEnum):
     SYNC = "sync"
     ANALYZE = "analyze"
+    INDEX = "index"
 
 
 class RunKind(StrEnum):
     PR_REVIEW = "pr_review"
+    KNOWLEDGE_QA = "knowledge_qa"
 
 
 class RunStatus(StrEnum):

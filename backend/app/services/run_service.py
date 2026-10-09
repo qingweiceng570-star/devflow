@@ -15,6 +15,7 @@ from app.persistence.models import BudgetAccount, Conversation, Message, Reposit
 from app.tools.executor import TOOLSET_VERSION
 
 PROMPT_VERSION = "pr_review.v1"
+PROMPT_VERSIONS = {"pr_review": PROMPT_VERSION, "knowledge_qa": "knowledge_qa.v1"}
 
 ACTIVE_RUN_STATUSES = (
     RunStatus.QUEUED,
@@ -28,7 +29,7 @@ TERMINAL_RUN_STATUSES = (
     RunStatus.TIMED_OUT,
 )
 
-VALID_KINDS = {RunKind.PR_REVIEW.value}
+VALID_KINDS = {RunKind.PR_REVIEW.value, RunKind.KNOWLEDGE_QA.value}
 
 
 def next_event_seq(db: DBSession, run_id: UUID) -> int:
@@ -57,9 +58,9 @@ def next_message_seq(db: DBSession, conversation_id: UUID) -> int:
     return (current or 0) + 1
 
 
-def config_snapshot(settings: Settings) -> dict:
+def config_snapshot(settings: Settings, kind: str) -> dict:
     return {
-        "prompt_version": PROMPT_VERSION,
+        "prompt_version": PROMPT_VERSIONS.get(kind, "unknown"),
         "toolset_version": TOOLSET_VERSION,
         "model": settings.llm_model,
         "provider": settings.llm_provider,
@@ -125,7 +126,7 @@ def submit_run(
         kind=kind,
         status=RunStatus.QUEUED,
         target=cleaned_target,
-        config_snapshot=config_snapshot(settings),
+        config_snapshot=config_snapshot(settings, kind),
     )
     db.add(run)
     db.flush()

@@ -85,7 +85,8 @@ export default function RepoOverviewPage() {
   return <WorkspaceShell
     user={user}
     active="repos"
-    note={{ stage: "M2", title: "PR 分析闭环", text: "在会话中提交 PR 编号，ChatAgent 依据已同步数据与固定版本代码给出带证据的审查结论。" }}
+    knowledgeHref={`/repos/${repoId}/knowledge`}
+    note={{ stage: "M3", title: "分析闭环与知识库", text: "会话支持 PR 审查与知识问答；知识库提供带引用与降级标记的混合检索。" }}
     onLogout={logout}
   >
     <header>
@@ -98,6 +99,7 @@ export default function RepoOverviewPage() {
         </p>
       </div>
       <div className="button-row">
+        <a className="button secondary small" href={`/repos/${repoId}/knowledge`}>知识库</a>
         <button className="button secondary small" disabled={busy === "sync" || repo?.state !== "active"} onClick={sync}>
           {busy === "sync" ? "同步中…" : "同步数据"}
         </button>
