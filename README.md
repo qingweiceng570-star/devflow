@@ -1,8 +1,10 @@
 # DevFlow AI：多智能体研发协作助手
 
-> 自主实现版 · 详细设计基线 v0.3 / M0 工程交付 · 2026-10-08
+> 自主实现版 · 详细设计基线 v0.4 / M1 工程交付 · 2026-10-09
 >
 > **M0 已实现：** FastAPI/Next.js 工程、PostgreSQL 迁移、本地管理员登录、CSRF、Worker 心跳、OpenAI 兼容适配器、受控工具循环、三个离线样例和验证面板。真实模型已接入（DeepSeek）并通过能力探测；GitHub 同步与业务分析从 M1/M2 开始。后文 M1–M7 的目录与功能仍是设计契约，不表示已经实现。
+>
+> **M1 已实现：** GitHub 只读接入与增量同步（水位/ETag/限流重试/幂等）、PostgreSQL 租约 Job 队列与崩溃恢复、固定 SHA 代码工作区、证据采集与查询接口、前端仓库页（/repos）。真实仓库验收见 [M1 验收](docs/demos/m1-acceptance.md)，边界决策见 [ADR 0003](docs/adr/0003-m1-sync-queue-workspace.md)。业务分析（ChatAgent/SSE/RAG/多 Agent）从 M2 开始。
 >
 > 实际使用见 [启动指南](docs/development.md)，验收记录见 [M0 验收](docs/demos/m0-acceptance.md)。所有初始限制都是可配置的工程起点，不是模型质量或生产性能承诺。
 >
@@ -1511,7 +1513,8 @@ MVP 不需要先实现全部 RAG、所有 Agent、MCP 或复杂多用户系统�
 - [x] 完成本地登录、CSRF、Worker 心跳、兼容模型适配与离线工具循环。
 - [x] 后端 45 项测试、前端类型检查/构建、浏览器登录与离线验证流程通过。
 - [x] 配置真实模型服务（DeepSeek `deepseek-chat`）并执行能力探测：三个样例全部通过（见 [验收记录补记](docs/demos/m0-acceptance.md)、[ADR 0002](docs/adr/0002-structured-output-transport.md)）。
-- [ ] 接入真实 GitHub/模型并完成 M0–M2。
+- [x] 接入真实 GitHub 仓库并完成 M1 验收：simonw/ttok 增量同步（幂等/水位/ETag/限流重试）、租约队列与恢复（真实 PostgreSQL 并发用例）、固定 SHA 读取与证据核查、仓库页 e2e（见 [M1 验收记录](docs/demos/m1-acceptance.md)）。
+- [ ] 完成 M2：ChatAgent 受控工具循环、PR 审查闭环、业务 SSE 与运行轨迹。
 - [ ] 实现其余模块并执行测试/评测。
 
 M0 已运行应用测试和浏览器验收，并完成 PostgreSQL 迁移与 Schema 一致性检查；结果见 [验收记录](docs/demos/m0-acceptance.md)。尚未调用真实模型分析仓库、执行 GitHub 写操作或进行质量/性能评测。M0 的能力探测是有界诊断请求，不是持久化业务 Run；Worker 暂仅提供心跳，业务队列在 M1 接入。

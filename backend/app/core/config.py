@@ -31,6 +31,33 @@ class Settings(BaseSettings):
     agent_total_token_budget: int = Field(default=30000, ge=1000, le=100000)
     model_output_token_limit: int = Field(default=1000, ge=100, le=4000)
     worker_heartbeat_seconds: int = Field(default=10, ge=1, le=30)
+    github_read_token: SecretStr = SecretStr("")
+    github_write_token: SecretStr = SecretStr("")
+    github_api_base: str = "https://api.github.com"
+    # httpx trust_env: system proxy/CA settings. Default off so GitHub requests
+    # egress deterministically; enable when the network requires a proxy.
+    github_trust_env: bool = False
+    # Optional HTTP(S) proxy for git fetch/clone of GitHub repositories, e.g.
+    # http://127.0.0.1:7897. Empty means direct connections.
+    github_git_proxy: str = ""
+    sync_max_pages: int = Field(default=4, ge=1, le=20)
+    sync_issue_window_days: int = Field(default=90, ge=7, le=365)
+    sync_ci_window_days: int = Field(default=30, ge=1, le=365)
+    sync_overlap_minutes: int = Field(default=5, ge=0, le=60)
+    sync_review_max_prs: int = Field(default=10, ge=1, le=50)
+    sync_ci_job_max_runs: int = Field(default=5, ge=0, le=25)
+    job_lease_seconds: int = Field(default=60, ge=30, le=600)
+    job_max_attempts: int = Field(default=3, ge=1, le=10)
+    job_retry_delay_seconds: int = Field(default=30, ge=5, le=3600)
+    job_retry_max_delay_seconds: int = Field(default=900, ge=30, le=7200)
+    worker_poll_seconds: float = Field(default=2, ge=0.2, le=30)
+    worker_recovery_seconds: int = Field(default=60, ge=10, le=600)
+    http_read_timeout_seconds: float = Field(default=20, ge=1, le=120)
+    http_max_retries: int = Field(default=2, ge=0, le=5)
+    max_code_file_bytes: int = Field(default=1048576, ge=1024, le=10485760)
+    max_read_lines: int = Field(default=400, ge=1, le=2000)
+    max_search_matches: int = Field(default=100, ge=1, le=500)
+    search_timeout_seconds: float = Field(default=5, ge=1, le=60)
 
     @field_validator("app_origin")
     @classmethod
@@ -48,18 +75,18 @@ class Settings(BaseSettings):
             raise ValueError("APP_ORIGIN must contain only scheme and host/port")
         return value.rstrip("/")
 
-    @field_validator("llm_base_url")
+    @field_validator("llm_base_url", "github_api_base", "github_git_proxy")
     @classmethod
     def valid_model_url(cls, value: str) -> str:
         if not value:
             return value
         parsed = urlsplit(value)
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-            raise ValueError("LLM_BASE_URL must be http(s)")
+            raise ValueError("URL must be http(s)")
         if parsed.username or parsed.password or parsed.query or parsed.fragment:
-            raise ValueError("Do not place credentials in LLM_BASE_URL")
+            raise ValueError("Do not place credentials in the URL")
         if parsed.scheme == "http" and parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
-            raise ValueError("Remote model endpoints must use HTTPS")
+            raise ValueError("Remote endpoints must use HTTPS")
         return value.rstrip("/")
 
     @model_validator(mode="after")

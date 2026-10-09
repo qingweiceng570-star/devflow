@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api/client";
+import WorkspaceShell from "@/components/workspace-shell";
 
 type User = { username: string; role: string };
 type Capabilities = {
@@ -60,21 +61,17 @@ export default function Dashboard() {
     catch (err) { setError(err instanceof Error ? err.message : "退出失败"); }
   }
   if (loading) return <main className="loading" aria-live="polite">正在打开工作空间…</main>;
-  return <div className="workspace">
-    <aside className="sidebar">
-      <div className="brand"><span className="brand-icon">D</span> DevFlow <span className="muted">AI</span></div>
-      <p className="nav-caption">工作空间</p><a className="nav-item active" href="/">◈ &nbsp; 基础验证</a>
-      <div className="nav-item disabled">⌘ &nbsp; 仓库协作 <span>M1</span></div>
-      <div className="nav-item disabled">▤ &nbsp; 知识库 <span>M3</span></div>
-      <div className="sidebar-note"><span className="pill">M0</span><strong>基础能力已建立</strong><p>先验证身份、模型与工具协议，逐步接入真实研发数据。</p></div>
-      <div className="user-row"><span className="avatar">{user?.username[0]?.toUpperCase() || "?"}</span><div><strong>{user?.username}</strong><small>本地管理员</small></div><button className="link-button" onClick={logout}>退出</button></div>
-    </aside>
-    <main className="dashboard">
-      <header><div><p className="eyebrow">FOUNDATION / M0</p><h1>验证基础，开始协作。</h1><p className="muted">确认模型能够调用工具、接收结果，并返回可校验的结构。</p></div><span className="pill">本地工作空间</span></header>
+  return <WorkspaceShell
+    user={user}
+    active="dashboard"
+    note={{ stage: "M1", title: "研发数据已接入", text: "GitHub 只读同步、队列任务与固定版本代码证据已可用；仓库协作见左侧入口。" }}
+    onLogout={logout}
+  >
+    <header><div><p className="eyebrow">FOUNDATION / M0–M1</p><h1>验证基础，开始协作。</h1><p className="muted">确认模型能够调用工具、接收结果，并返回可校验的结构。</p></div><span className="pill">本地工作空间</span></header>
       {error && <div role="alert" className="error-box">{error} <button className="link-button" onClick={() => window.location.reload()}>重新加载</button></div>}
       <section className="status-grid" aria-label="服务状态">
         <Status label="身份与会话" value={user ? "已验证" : "未连接"} detail="HttpOnly 会话与 CSRF 校验" good={!!user} />
-        <Status label="任务进程" value={caps?.worker_online ? "在线" : "等待启动"} detail="M0 心跳 · 业务任务从 M1 接入" good={!!caps?.worker_online} />
+        <Status label="任务进程" value={caps?.worker_online ? "在线" : "等待启动"} detail="队列心跳 · 同步任务由 Worker 执行" good={!!caps?.worker_online} />
         <Status label="模型连接" value={caps?.model_configured ? "待能力验证" : "待配置"} detail={caps?.model || "OpenAI 兼容接口"} good={false} />
       </section>
       <section className="panel">
@@ -97,9 +94,8 @@ export default function Dashboard() {
       </section>
       <div className="bottom-grid"><section className="panel"><div className="panel-heading"><div><span className="section-number">02</span><h2>最近验证</h2></div><button className="link-button" onClick={() => refresh().catch((err) => setError(err instanceof Error ? err.message : "刷新失败"))}>刷新</button></div>
         {history.length ? <ul className="history">{history.slice(0, 5).map((item) => <li key={item.id}><span className={item.passed ? "checkmark" : "muted"}>{item.passed ? "✓" : "!"}</span><div><strong>{item.case_id}</strong><small>{item.provider === "fixture" ? "离线协议回放" : "真实模型探测"}</small></div><span className="tag">{item.passed ? "通过" : "未通过"}</span></li>)}</ul> : <p className="empty">尚无验证记录。运行一次样例即可开始。</p>}</section>
-        <section className="panel next-stage"><span className="eyebrow">NEXT / M1</span><h2>接入真实研发数据</h2><p>下一阶段连接 GitHub 仓库、同步 Issue / PR / CI，并建立固定版本的代码证据。</p><ul><li>仓库身份与访问范围</li><li>增量同步与可追溯快照</li><li>固定 commit 的只读工作区</li></ul><span className="tag">当前未接入 GitHub</span></section></div>
-    </main>
-  </div>;
+        <section className="panel next-stage"><span className="eyebrow">NEXT / M2</span><h2>PR 分析闭环</h2><p>基于已同步的研发数据与固定版本代码证据，让 ChatAgent 完成第一轮 PR 风险审查。</p><ul><li>ChatAgent 与受控工具循环</li><li>PR 审查结构化输出与引用校验</li><li>SSE 运行轨迹与取消</li></ul><span className="tag">GitHub 同步与代码证据已可用（M1）</span></section></div>
+  </WorkspaceShell>;
 }
 
 function Status({ label, value, detail, good }: { label: string; value: string; detail: string; good: boolean }) {

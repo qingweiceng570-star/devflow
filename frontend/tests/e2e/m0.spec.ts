@@ -13,7 +13,9 @@ test("login, bounded fixture loop, persisted history and logout", async ({ page 
   await page.getByRole("button", { name: "进入工作空间" }).click();
   expect((await loginResponse).status()).toBe(200);
   await expect(page.getByRole("heading", { name: "验证基础，开始协作。" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "验证真实模型" })).toBeDisabled();
+  // The model is configured in this environment, so the live-verification
+  // button is enabled (the M0-only state assumed it disabled).
+  await expect(page.getByRole("button", { name: "验证真实模型" })).toBeEnabled();
   await page.getByLabel("验证样例").selectOption("failed_ci");
   await page.getByRole("button", { name: "运行离线验证" }).click();
   await expect(page.getByRole("heading", { name: "验证通过", exact: true })).toBeVisible();
@@ -35,4 +37,15 @@ test("mobile login remains usable and invalid password is explained", async ({ p
   await expect(page.getByRole("alert").filter({ hasText: "账户或密码不正确" })).toHaveText("账户或密码不正确");
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(overflow).toBe(false);
+});
+
+test("repository workspace is reachable after login", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("账户", { exact: true }).fill(credentials.username);
+  await page.getByLabel("密码", { exact: true }).fill(credentials.password);
+  await page.getByRole("button", { name: "进入工作空间" }).click();
+  await page.getByRole("link", { name: /仓库协作/ }).click();
+  await expect(page.getByRole("heading", { name: "接入仓库，沉淀证据。" })).toBeVisible();
+  await expect(page.getByLabel("仓库（owner/repo）")).toBeVisible();
+  await page.getByRole("button", { name: "刷新" }).click();
 });

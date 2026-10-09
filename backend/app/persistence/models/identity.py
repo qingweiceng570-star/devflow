@@ -1,14 +1,11 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.persistence.database import Base
-
-
-def utcnow() -> datetime:
-    return datetime.now(UTC)
+from app.persistence.models.base import utcnow
 
 
 class User(Base):
