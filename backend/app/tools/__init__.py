@@ -1,0 +1,1 @@
+"""Server-authorized tool registry."""

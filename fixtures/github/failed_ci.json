@@ -1,0 +1,9 @@
+{
+  "synthetic": true,
+  "case_id": "failed_ci",
+  "description": "合成样例：CI 的 test_page_size 在负数输入边界失败。错误日志为人工构造，未读取实际 GitHub。",
+  "verification_value": "DEVFLOW_FAILED_CI_V1",
+  "run_id": 1001,
+  "attempt": 1,
+  "error": "AssertionError: expected HTTP 422, got HTTP 200"
+}

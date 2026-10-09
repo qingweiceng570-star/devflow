@@ -1,0 +1,457 @@
+{
+  "RepoScope": {
+    "additionalProperties": false,
+    "properties": {
+      "actor_id": {
+        "format": "uuid",
+        "title": "Actor Id",
+        "type": "string"
+      },
+      "repo_id": {
+        "format": "uuid",
+        "title": "Repo Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "actor_id",
+      "repo_id"
+    ],
+    "title": "RepoScope",
+    "type": "object"
+  },
+  "ToolResult": {
+    "$defs": {
+      "ToolError": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "default": false,
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ToolError",
+        "type": "object"
+      },
+      "ToolMeta": {
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "freshness": {
+            "default": "unknown",
+            "enum": [
+              "fresh",
+              "stale",
+              "unknown"
+            ],
+            "title": "Freshness",
+            "type": "string"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "source",
+          "observed_at"
+        ],
+        "title": "ToolMeta",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "status": {
+        "enum": [
+          "ok",
+          "partial",
+          "error"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "data": {
+        "additionalProperties": true,
+        "title": "Data",
+        "type": "object"
+      },
+      "evidence_ids": {
+        "items": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "title": "Evidence Ids",
+        "type": "array"
+      },
+      "warnings": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Warnings",
+        "type": "array"
+      },
+      "error": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ToolError"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "meta": {
+        "$ref": "#/$defs/ToolMeta"
+      }
+    },
+    "required": [
+      "status",
+      "meta"
+    ],
+    "title": "ToolResult",
+    "type": "object"
+  },
+  "Evidence": {
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "format": "uuid",
+        "title": "Id",
+        "type": "string"
+      },
+      "repo_id": {
+        "format": "uuid",
+        "title": "Repo Id",
+        "type": "string"
+      },
+      "source_type": {
+        "title": "Source Type",
+        "type": "string"
+      },
+      "source_url": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Source Url"
+      },
+      "observed_at": {
+        "format": "date-time",
+        "title": "Observed At",
+        "type": "string"
+      },
+      "content_hash": {
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "excerpt": {
+        "title": "Excerpt",
+        "type": "string"
+      },
+      "truncated": {
+        "default": false,
+        "title": "Truncated",
+        "type": "boolean"
+      },
+      "commit_sha": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Commit Sha"
+      },
+      "file_path": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "File Path"
+      },
+      "line_start": {
+        "anyOf": [
+          {
+            "minimum": 1,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Line Start"
+      },
+      "line_end": {
+        "anyOf": [
+          {
+            "minimum": 1,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Line End"
+      }
+    },
+    "required": [
+      "id",
+      "repo_id",
+      "source_type",
+      "observed_at",
+      "content_hash",
+      "excerpt"
+    ],
+    "title": "Evidence",
+    "type": "object"
+  },
+  "AnalysisResult": {
+    "$defs": {
+      "Finding": {
+        "additionalProperties": false,
+        "properties": {
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "info"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "claim": {
+            "title": "Claim",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "suggestion": {
+            "title": "Suggestion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "claim",
+          "evidence_ids",
+          "suggestion"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
+      "RepoScope": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "repo_id": {
+            "format": "uuid",
+            "title": "Repo Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_id",
+          "repo_id"
+        ],
+        "title": "RepoScope",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "kind": {
+        "enum": [
+          "repo_health",
+          "issue_triage",
+          "pr_review",
+          "ci_debug",
+          "release_check",
+          "knowledge_qa",
+          "weekly_report"
+        ],
+        "title": "Kind",
+        "type": "string"
+      },
+      "summary": {
+        "minLength": 1,
+        "title": "Summary",
+        "type": "string"
+      },
+      "verdict": {
+        "enum": [
+          "recommend_merge",
+          "hold",
+          "insufficient_evidence",
+          "recommend_release",
+          "not_applicable"
+        ],
+        "title": "Verdict",
+        "type": "string"
+      },
+      "coverage": {
+        "enum": [
+          "complete",
+          "partial",
+          "unavailable"
+        ],
+        "title": "Coverage",
+        "type": "string"
+      },
+      "freshness": {
+        "enum": [
+          "fresh",
+          "stale",
+          "unknown"
+        ],
+        "title": "Freshness",
+        "type": "string"
+      },
+      "findings": {
+        "items": {
+          "$ref": "#/$defs/Finding"
+        },
+        "title": "Findings",
+        "type": "array"
+      },
+      "missing_evidence": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Missing Evidence",
+        "type": "array"
+      },
+      "limitations": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Limitations",
+        "type": "array"
+      },
+      "scope": {
+        "$ref": "#/$defs/RepoScope"
+      }
+    },
+    "required": [
+      "kind",
+      "summary",
+      "verdict",
+      "coverage",
+      "freshness",
+      "scope"
+    ],
+    "title": "AnalysisResult",
+    "type": "object"
+  },
+  "ProbeAnswer": {
+    "additionalProperties": false,
+    "properties": {
+      "status": {
+        "pattern": "^ok$",
+        "title": "Status",
+        "type": "string"
+      },
+      "summary": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Summary",
+        "type": "string"
+      },
+      "observed_value": {
+        "maxLength": 120,
+        "minLength": 1,
+        "title": "Observed Value",
+        "type": "string"
+      },
+      "evidence_id": {
+        "maxLength": 80,
+        "minLength": 1,
+        "title": "Evidence Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status",
+      "summary",
+      "observed_value",
+      "evidence_id"
+    ],
+    "title": "ProbeAnswer",
+    "type": "object"
+  }
+}

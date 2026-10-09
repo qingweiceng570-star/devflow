@@ -1,0 +1,9 @@
+{
+  "synthetic": true,
+  "case_id": "risk_pr",
+  "description": "合成样例：PR 删除管理员权限检查。风险提示需要后续 M2 的代码和证据校验，本阶段仅回放协议。",
+  "verification_value": "DEVFLOW_RISK_PR_V1",
+  "pr_number": 43,
+  "changes": ["remove administrator authorization check"],
+  "ci": "success"
+}

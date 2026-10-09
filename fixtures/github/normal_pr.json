@@ -1,0 +1,9 @@
+{
+  "synthetic": true,
+  "case_id": "normal_pr",
+  "description": "合成样例：PR 增加参数校验和对应单元测试。本阶段只验证工具调用，不作真实合入建议。",
+  "verification_value": "DEVFLOW_NORMAL_PR_V1",
+  "pr_number": 42,
+  "changes": ["validate positive page size", "add boundary tests"],
+  "ci": "success"
+}

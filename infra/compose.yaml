@@ -1,0 +1,68 @@
+name: devflow
+services:
+  db:
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Run scripts/init_env.py first}
+      POSTGRES_USER: ${POSTGRES_USER:?Run scripts/init_env.py first}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/init_env.py first}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  migrate:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: infra/docker/backend.Dockerfile
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      STORAGE_ROOT: /data
+    volumes: ["../var:/data"]
+    command: ["uv", "run", "--no-sync", "alembic", "upgrade", "head"]
+    depends_on:
+      db: {condition: service_healthy}
+  api:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: infra/docker/backend.Dockerfile
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      STORAGE_ROOT: /data
+    ports: ["127.0.0.1:${API_PORT:-8100}:8100"]
+    volumes: ["../var:/data"]
+    command: ["uv", "run", "--no-sync", "uvicorn", "app.main:app_factory", "--factory", "--host", "0.0.0.0", "--port", "8100"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  worker:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: infra/docker/backend.Dockerfile
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      STORAGE_ROOT: /data
+    volumes: ["../var:/data"]
+    command: ["uv", "run", "--no-sync", "python", "-m", "app.worker"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  web:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: infra/docker/frontend.Dockerfile
+    environment:
+      DEVFLOW_API_URL: http://api:8100
+    ports: ["127.0.0.1:${WEB_PORT:-3100}:3100"]
+    depends_on: [api]
+volumes:
+  postgres_data:
