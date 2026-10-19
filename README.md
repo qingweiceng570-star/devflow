@@ -1,18 +1,19 @@
 # DevFlow AI：多智能体研发协作助手
 
-> 自主实现版 · 详细设计基线 v0.6 / M3 工程交付 · 2026-10-09
+> 自主实现版 · M0–M7 学习版实现与验收 · 2026-10-15
 >
-> **M0 已实现：** FastAPI/Next.js 工程、PostgreSQL 迁移、本地管理员登录、CSRF、Worker 心跳、OpenAI 兼容适配器、受控工具循环、三个离线样例和验证面板。真实模型已接入（DeepSeek）并通过能力探测；GitHub 同步与业务分析从 M1/M2 开始。后文 M1–M7 的目录与功能仍是设计契约，不表示已经实现。
+> **已实现：** 登录与仓库隔离、GitHub 增量同步、固定 SHA 证据、PR/Issue/CI/健康检查/知识问答、LangGraph 发布检查、共享预算与节点恢复、知识库与 BM25/可选向量检索、项目记忆审批、活动报告、版本绑定的操作草稿、审计、只读 MCP 和声明式 Skill。
 >
-> **M1 已实现：** GitHub 只读接入与增量同步（水位/ETag/限流重试/幂等）、PostgreSQL 租约 Job 队列与崩溃恢复、固定 SHA 代码工作区、证据采集与查询接口、前端仓库页（/repos）。真实仓库验收见 [M1 验收](docs/demos/m1-acceptance.md)，边界决策见 [ADR 0003](docs/adr/0003-m1-sync-queue-workspace.md)。业务分析（ChatAgent/SSE/RAG/多 Agent）从 M2 开始。
+> **开始使用：** [启动与日常操作](docs/development.md)；[项目流程详解](docs/project-process.md) 说明组件职责、端到端链路、边界与验收方式。浏览器进入仓库后，可使用「新建分析会话」「知识库」「工作流与审批」。真实模型需要本地 `.env`；密钥不进入代码仓库。
 >
-> **M2 已实现：** 会话与运行生命周期（原子提交、活动运行唯一、取消竞态裁决）、通用 Agent Loop（探针与业务共用）、PR 审查工具集（diff 准备与优先排序、固定 SHA 代码读取、CI 匹配）、引用校验与裁决规则（只降级）、SSE 进度与断线恢复、聊天/运行/证据前端。真实 PR #16 闭环验收见 [M2 验收](docs/demos/m2-acceptance.md)，决策见 [ADR 0004](docs/adr/0004-m2-run-pipeline.md)。Issue/CI 专用 Agent、多 Agent 工作流、RAG、记忆从 M3–M6 起。
+> **验收与边界：** [M4–M7 验收记录](docs/demos/platform-acceptance.md)、[40 例确定性回归结果](evals/results/offline-latest.json)。真实 Issue、CI 与 PR 发布检查已运行；CI 日志无权限时保留未知。外部写入默认关闭，真实写回未执行；可选 Milvus/embedding 与第三方 MCP 需另行配置。离线边界通过不代表模型质量或生产性能承诺。
 >
-> **M3 已实现：** 文档上传与结构感知切分（zh-en.v1 分词器、600/900/80 token 结构块）、BM25+可选向量混合检索（RRF 融合、DB 回查权威过滤、单路降级语义）、索引代与 Outbox（全量重建、原子激活、代际回收）、召回测试页、搜索知识工具与知识问答模式（引用可追溯到文档版本与行号）。真实文档闭环验收见 [M3 验收](docs/demos/m3-acceptance.md)，决策见 [ADR 0005](docs/adr/0005-m3-rag.md)。专用 Agent、多 Agent 工作流、记忆从 M4–M6 起。
+> 下文保留完整设计契约；具体交付实现、受控简化与外部依赖边界以验收记录和 `contracts/openapi.json` 为准。历史阶段记录：[M0](docs/demos/m0-acceptance.md)、[M1](docs/demos/m1-acceptance.md)、[M2](docs/demos/m2-acceptance.md)、[M3](docs/demos/m3-acceptance.md)。
+> 工作流恢复、计划约束与写回边界的实现决策见 [ADR 0006](docs/adr/0006-platform-workflows-and-write-boundaries.md)。截至 2026-10-16：后端 255 项、浏览器 13 项、固定评测 40 项通过；首轮还完成了独立 Docker 安装和备份恢复。
 >
-> 实际使用见 [启动指南](docs/development.md)，验收记录见 [M0 验收](docs/demos/m0-acceptance.md)。所有初始限制都是可配置的工程起点，不是模型质量或生产性能承诺。
->
-> 项目灵感来自小林 coding 的 DevFlow AI 介绍文章。本设计依据已阅读的文章正文独立制定，不表示获得了原项目源码；原文能力与本项目的具体实现选择见文末说明。
+> 项目依据已阅读的小林 coding DevFlow AI 介绍文章独立实现，不表示取得原项目源码。
+
+> **2026-10-16 改进：** 已建立 [真实案例评测基线](evals/README.md)，增加按提交 SHA 获取 CI、GitHub 权限诊断、PR/Issue/CI/来源证据选择器，以及审批、取消、租约恢复的独立浏览器流程。详见 [本轮实现与验收](docs/demos/improvements-20261016.md)。真实基线的来源复核初稿发现旧输出的事实与引用问题，未将功能测试通过率当作模型准确率。
 
 ## 目录
 
@@ -1345,7 +1346,7 @@ Windows 开发可使用 Docker Desktop/WSL2 的 Linux 容器；数据路径由�
 
 初始化顺序：检查配置 → 数据库启动 → 单独运行迁移 → 创建管理员 → API/Worker 启动 → 可选索引服务 → Web。多个副本不能各自在启动时抢跑迁移。
 
-M0 工程文件与锁文件已建立，实际安装、迁移、管理员初始化、启动、停止和测试命令见 [启动指南](docs/development.md)。当前知识库 profile 尚未实现，不能使用上述完整蓝图启动 Milvus 或业务 Job。M7 仍需以完整系统的干净环境复现作为完成条件。
+M0 工程文件与锁文件已建立，实际安装、迁移、管理员初始化、启动、停止和测试命令见 [启动指南](docs/development.md)。知识库 profile 已提供，默认 BM25 可独立运行；Milvus/embedding 为可选通道。干净环境使用 infra/compose.acceptance.yaml，实际验证结果见本轮验收记录。
 
 ### 21.4 健康检查与故障隔离
 
@@ -1520,9 +1521,9 @@ MVP 不需要先实现全部 RAG、所有 Agent、MCP 或复杂多用户系统�
 - [x] 接入真实 GitHub 仓库并完成 M1 验收：simonw/ttok 增量同步（幂等/水位/ETag/限流重试）、租约队列与恢复（真实 PostgreSQL 并发用例）、固定 SHA 读取与证据核查、仓库页 e2e（见 [M1 验收记录](docs/demos/m1-acceptance.md)）。
 - [x] 完成 M2：ChatAgent 受控工具循环、PR 审查闭环（裁决规则/引用校验/新鲜度复查）、业务 SSE 与运行轨迹、聊天/运行/证据前端；真实 PR 闭环验收（见 [M2 验收记录](docs/demos/m2-acceptance.md)）。
 - [x] 完成 M3：文档接入与结构感知切分、BM25（可扩展向量）混合检索与 RRF、索引代/Outbox 一致性、召回测试页与知识问答；真实文档闭环验收（见 [M3 验收记录](docs/demos/m3-acceptance.md)）。
-- [ ] 完成 M4–M7：专项 Agent、多 Agent 工作流、记忆/周报/草稿、扩展与交付。
+- [x] 完成 M4–M7 的学习版代码：专项 Agent、受控多 Agent 工作流、记忆/报告/审批草稿、MCP/Skill、评测与备份恢复；外部依赖的实际验收边界见 [本轮记录](docs/demos/platform-acceptance.md)。
 
-M0 已运行应用测试和浏览器验收，并完成 PostgreSQL 迁移与 Schema 一致性检查；结果见 [验收记录](docs/demos/m0-acceptance.md)。尚未调用真实模型分析仓库、执行 GitHub 写操作或进行质量/性能评测。M0 的能力探测是有界诊断请求，不是持久化业务 Run；Worker 暂仅提供心跳，业务队列在 M1 接入。
+当前已运行后端、浏览器、迁移一致性、固定评测与恢复验收，并执行真实仓库只读模型分析。GitHub 写操作保持关闭；模型回答质量与性能没有统计性达标承诺。详见 [当前验收记录](docs/demos/platform-acceptance.md)。
 
 ### 24.4 来源与设计归属
 
@@ -1540,3 +1541,5 @@ M0 已运行应用测试和浏览器验收，并完成 PostgreSQL 迁移与 Sche
 - [Ragas](https://docs.ragas.io/en/stable/)：评测框架参考。
 
 本仓库与原作者的课程及官方代码仓库无隶属关系。后续实现有意改变本设计时，应先记录原因、受影响契约和迁移/验证方式，再同步更新对应章节。
+#   d e v f l o w  
+ 
