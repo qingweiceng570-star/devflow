@@ -1,0 +1,171 @@
+{
+  "id": "pr-16",
+  "repository": "simonw/ttok",
+  "kind": "pr_review",
+  "target": {
+    "pr_number": 16,
+    "head_sha": "b56570be465aca1b95087be00b09c167c638a832",
+    "base_sha": "5a6ae1b7dc05a026085a25253fc27e2be5d5c0a2",
+    "refreshed_at": "2026-10-15T06:25:44.588653+00:00"
+  },
+  "evidence": [
+    {
+      "id": "f21cf2a8-fbf6-4e06-9d06-aee9882870cf",
+      "type": "pr_diff",
+      "locator": {
+        "pr_number": 16,
+        "path": "tests/test_ttok.py",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "head_sha": "b56570be465aca1b95087be00b09c167c638a832"
+      },
+      "source_url": "https://github.com/simonw/ttok/pull/16/files",
+      "observed_at": "2026-10-15T06:25:45.412595+00:00",
+      "sha256": "4b1264a21ae226c847a5cae342708c4a4929d36acb9be901834f00286862a2df",
+      "content": "diff 16 tests/test_ttok.py\n@@ -61,6 +61,9 @@ def test_ttok_count_and_tokens(args, expected_length, expected_tokens):\n             [b\"86127\", b\"15682\", b\"48864\", b\"21990\", b\"38641\", \"--decode\", \"--tokens\"],\n             \"[b'\\\\xe7\\\\xa7\\\\x81', b'\\\\xe3\\\\x81\\\\xaf', b'\\\\xe5\\\\xad\\\\xa6', b'\\\\xe7\\\\x94\\\\x9f', b'\\\\xe3\\\\x81\\\\xa7\\\\xe3\\\\x81\\\\x99']\",\n         ),\n+        ([\"hello\", \"big\", \"world\", \"out\", \"there\", \"--tokens\", \"--chunksize\", \"2\"], \"[b'hello', b' big']\\n[b' world', b' out']\\n[b' there']\"),\n+        ([\"hello\", \"big\", \"world\", \"out\", \"there\", \"--chunksize\", \"2\"], \"hello big\\n world out\\n there\"),\n+        ([\"hello\", \"big\", \"world\", \"out\", \"there\", \"--encode\", \"--chunksize\", \"2\"], \"15339 2466\\n1917 704\\n1070\"),\n     ),\n )\n def test_ttok_decode_encode_tokens(args, expected):"
+    },
+    {
+      "id": "0a354a93-03fc-4f42-b336-c2e764fe9413",
+      "type": "pr_diff",
+      "locator": {
+        "pr_number": 16,
+        "path": "ttok/cli.py",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 2,
+        "head_sha": "b56570be465aca1b95087be00b09c167c638a832"
+      },
+      "source_url": "https://github.com/simonw/ttok/pull/16/files",
+      "observed_at": "2026-10-15T06:25:45.425390+00:00",
+      "sha256": "927befd2fa0e79275d3d69c4b1efefa44f5779c5bcc683c7178786e45c0bd7f6",
+      "content": "diff 16 ttok/cli.py\n@@ -20,6 +20,7 @@\n )\n @click.option(\"as_tokens\", \"--tokens\", is_flag=True, help=\"Output full tokens\")\n @click.option(\"--allow-special\", is_flag=True, help=\"Do not error on special tokens\")\n+@click.option(\"--chunksize\", type=int, help=\"Output chunks of this size\")\n def cli(\n     prompt,\n     input,\n@@ -29,6 +30,7 @@ def cli(\n     decode_tokens,\n     as_tokens,\n     allow_special,\n+    chunksize,\n ):\n     \"\"\"\n     Count and truncate text based on tokens\n@@ -113,12 +115,23 @@ def cli(\n     if truncate:\n         tokens = tokens[:truncate]\n \n+    if chunksize:\n+        chunks = [tokens[i:i + chunksize] for i in range(0, len(tokens), chunksize)]\n+    else:\n+        chunks = [tokens]\n+\n     if encode_tokens:\n         if as_tokens:\n-            click.echo(encoding.decode_tokens_bytes(tokens))\n+            for chunk in chunks:\n+                click.echo(encoding.decode_tokens_bytes(chunk))\n         else:\n-            click.echo(\" \".join(str(t) for t in tokens))\n+            for chunk in chunks:\n+                click.echo(\" \".join(str(t) for t in chunk))\n+    elif chunksize:\n+        for chunk in chunks:\n+            click.echo(encoding.decode(chunk))\n     elif truncate:\n         click.echo(encoding.decode(tokens), nl=False)\n     else:\n         click.echo(len(tokens))\n+"
+    },
+    {
+      "id": "5e34533d-6c8a-4637-8483-d79aeae32f97",
+      "type": "repo_summary",
+      "locator": {
+        "window_days": 7,
+        "as_of": "2026-10-09T05:45:56.650621+00:00"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:25:47.077777+00:00",
+      "sha256": "ded3d422a5d2b812ac4cdf78d7c2b42ab823c2fcbfa611aa001e8c9aef5f2a3d",
+      "content": "{\"counts\": {\"open_issues\": 7, \"open_pulls\": 3, \"merged_pulls_recent\": 1, \"failing_ci_runs_recent\": 4}, \"as_of\": \"2026-10-09T05:45:56.650621+00:00\", \"window_days\": 7, \"only_synced_scope\": true, \"ci_coverage\": {\"last_coverage\": \"complete\", \"at\": \"2026-10-09T05:45:55.993422+00:00\"}}"
+    },
+    {
+      "id": "402c7ae3-c2f0-4476-b509-76804b5a0c84",
+      "type": "pull_request",
+      "locator": {
+        "pr_number": 16,
+        "external_id": "2208141610",
+        "head_sha": "b56570be465aca1b95087be00b09c167c638a832"
+      },
+      "source_url": "https://github.com/simonw/ttok/pull/16",
+      "observed_at": "2026-10-15T06:25:47.161353+00:00",
+      "sha256": "f46e5765da581d41876b868d283da1aef3d93d8225a887dc7674f6978a19a73b",
+      "content": "This change implements a simple alternative to https://github.com/simonw/ttok/pull/2/files. It does not deal with output files, and instead simply prints each chunk sequentially by the existing output mechanism.\r\n\r\nWhen producing text output this is uninteresting. With `--tokens` it gives readable split output. Combined with `--encode` it produces one encoded chunk per line, output that can be piped to `split -l 1 prefix`, which can be decoded later. This makes it straightforward to split long text into chunks for embedding or other purposes."
+    }
+  ],
+  "output": {
+    "summary": "PR #16 新增 --chunksize 选项，按 token 分块后逐行输出；--tokens 与 --encode 组合时每块一行，并新增 3 个测试用例。diff 显示分块逻辑和测试覆盖的核心路径基本一致。但证据不完整：缺少 CI 检查结果、合并状态与版本新鲜度，无法确认必需检查通过或目标未变。未发现可核查的阻塞缺陷，判定为 insufficient_evidence。",
+    "verdict": "insufficient_evidence",
+    "findings": [
+      {
+        "severity": "low",
+        "claim": "在 --chunksize 下，若未同时指定 --tokens/--encode 且指定 --truncate，新增分支会优先于 truncate 分支执行，因此输出解码后的分块文本，而不沿用原有 nl=False 的截断输出路径。这属于行为差异，PR 描述也仅明确承诺 text/tokens/encode 三种模式。",
+        "evidence_ids": [
+          "0a354a93-03fc-4f42-b336-c2e764fe9413",
+          "402c7ae3-c2f0-4476-b509-76804b5a0c84"
+        ],
+        "location": "ttok/cli.py diff 新增 elif chunksize 分支",
+        "suggestion": "确认 --chunksize 与 --truncate 组合的预期输出，并在 PR 描述或 help 文本中说明。"
+      },
+      {
+        "severity": "low",
+        "claim": "新增测试仅覆盖 --tokens、纯文本、--encode 三种分块模式，未覆盖 --chunksize 与 --truncate 的组合、chunksize 大于 token 数或为负值等边界。",
+        "evidence_ids": [
+          "f21cf2a8-fbf6-4e06-9d06-aee9882870cf",
+          "0a354a93-03fc-4f42-b336-c2e764fe9413"
+        ],
+        "location": "tests/test_ttok.py 新增第 64-66 行用例",
+        "suggestion": "补充边界用例（chunksize 超过长度、与 --truncate 组合），减少回归风险。"
+      }
+    ],
+    "hypotheses": [
+      {
+        "claim": "--chunksize 为 0 或负数时，range(0, len(tokens), chunksize) 会抛错；0 触发 ValueError，负数则产生空 chunks，导致无输出。",
+        "supporting_evidence_ids": [
+          "0a354a93-03fc-4f42-b336-c2e764fe9413"
+        ],
+        "counter_evidence_ids": [],
+        "verification_steps": [
+          "本地运行 ttok 'hello' --chunksize 0 与 --chunksize -1 观察输出",
+          "若确认为交互错误，建议 click 选项加范围校验"
+        ]
+      },
+      {
+        "claim": "--tokens 与 --decode 组合在 chunksize 下逐块 click.echo，可能改变原有单行 repr 输出格式（改为每块一行）。",
+        "supporting_evidence_ids": [
+          "0a354a93-03fc-4f42-b336-c2e764fe9413",
+          "f21cf2a8-fbf6-4e06-9d06-aee9882870cf"
+        ],
+        "counter_evidence_ids": [],
+        "verification_steps": [
+          "核对 cli.py 第 115 行前 decode_tokens 路径是否同样经过 chunks 分支"
+        ]
+      }
+    ],
+    "missing_evidence": [
+      {
+        "item": "CI 检查结果",
+        "reason": "冻结证据未包含该 head_sha 的检查运行状态",
+        "impact": "无法确认必需检查是否通过，无法给出 recommend_merge",
+        "next_action": "拉取 b56570be 的 GitHub checks/status 结果"
+      },
+      {
+        "item": "合并状态与目标分支新鲜度",
+        "reason": "未提供 mergeable 字段与 base 分支最新提交对比",
+        "impact": "无法排除合并冲突或目标已变动",
+        "next_action": "查询 PR mergeable 状态与 base 分支当前 SHA"
+      },
+      {
+        "item": "cli.py 完整文件上下文",
+        "reason": "仅有 diff 片段，未见第 100-115 行 decode_tokens 分支",
+        "impact": "无法确认 --decode 与 --chunksize 组合的实际行为",
+        "next_action": "读取 ttok/cli.py 完整版本"
+      }
+    ],
+    "next_actions": [
+      {
+        "description": "获取该 head_sha 的 CI 通过情况后再决定合并",
+        "owner_hint": "maintainer",
+        "draft_id": null
+      },
+      {
+        "description": "确认 --chunksize 与 --truncate/--decode 的组合语义并补测试",
+        "owner_hint": "PR author",
+        "draft_id": null
+      }
+    ],
+    "limitations": [
+      "仅有 PR diff 与 PR 描述，无完整文件内容",
+      "CI 与合并状态未知",
+      "证据为历史冻结快照，不代表当前仓库状态"
+    ]
+  },
+  "prepared_target": [],
+  "duration_seconds": 6.86,
+  "agent_usage": [
+    {
+      "total_tokens": 6595,
+      "estimated": false
+    }
+  ],
+  "config": {
+    "model": "deepseek-chat",
+    "prompt_sha256": "a4b4d6254b64ecc3d870769e6e9576924eab693ca5cf322a7d255589a7e37530",
+    "source_case_sha256": "9b82174201622bbd1cbf8acf1b7089387aa4f0c9aa2c2f84559bc171a7aa2bbc",
+    "mode": "frozen_evidence_replay"
+  }
+}

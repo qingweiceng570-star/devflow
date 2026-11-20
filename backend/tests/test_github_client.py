@@ -57,7 +57,7 @@ def test_plain_403_is_not_a_rate_limit(settings):
 
     with pytest.raises(DomainError) as caught:
         client(settings, handler).get("/repos/o/r")
-    assert caught.value.code == "SOURCE_UNAVAILABLE"
+    assert caught.value.code == "GITHUB_PERMISSION_DENIED"
     assert not caught.value.retryable
 
 
@@ -65,7 +65,7 @@ def test_404_and_401_are_source_unavailable(settings):
     for status in (401, 404):
         with pytest.raises(DomainError) as caught:
             client(settings, lambda _r, s=status: httpx.Response(s)).get("/repos/o/r")
-        assert caught.value.code == "SOURCE_UNAVAILABLE"
+        assert caught.value.code == {401: "GITHUB_AUTH_INVALID", 404: "GITHUB_RESOURCE_UNAVAILABLE"}[status]
 
 
 def test_retry_on_5xx_then_success(settings, monkeypatch):
@@ -117,3 +117,59 @@ def test_no_auth_header_when_token_empty(settings):
         return httpx.Response(200, json={})
 
     GitHubClient(settings, "", transport=httpx.MockTransport(handler)).get("/repos/o/r")
+
+
+def test_renamed_repository_redirect_is_followed(settings):
+    seen: list[str] = []
+
+    def handler(request):
+        seen.append(request.url.path)
+        if request.url.path == "/repos/old/name":
+            return httpx.Response(
+                301, headers={"location": "https://api.github.com/repositories/42"}
+            )
+        assert request.url.path == "/repositories/42"
+        return httpx.Response(
+            200, json={"id": 42, "full_name": "new/name", "default_branch": "main"}
+        )
+
+    page = client(settings, handler).get("/repos/old/name")
+    assert page.data["full_name"] == "new/name"
+    assert seen == ["/repos/old/name", "/repositories/42"]
+
+
+def test_cross_origin_redirect_is_rejected(settings):
+    def handler(_request):
+        return httpx.Response(302, headers={"location": "https://evil.example/repos/o/r"})
+
+    with pytest.raises(DomainError) as caught:
+        client(settings, handler).get("/repos/o/r")
+    assert caught.value.code == "SOURCE_UNAVAILABLE"
+    assert "越界" in caught.value.message
+
+
+def test_redirect_loop_is_bounded(settings):
+    def handler(_request):
+        return httpx.Response(301, headers={"location": "https://api.github.com/repos/o/r"})
+
+    with pytest.raises(DomainError) as caught:
+        client(settings, handler).get("/repos/o/r")
+    assert "重定向次数过多" in caught.value.message
+
+
+def test_api_proxy_setting_is_used(settings):
+    settings.github_api_proxy = "http://127.0.0.1:7897"
+    assert client(settings, lambda _r: httpx.Response(200, json={})).proxy == (
+        "http://127.0.0.1:7897"
+    )
+
+
+def test_transport_failure_mentions_proxy_configuration(settings):
+    def handler(_request):
+        raise httpx.ConnectError("connection reset")
+
+    settings.http_max_retries = 0
+    with pytest.raises(DomainError) as caught:
+        client(settings, handler).get("/repos/o/r")
+    assert caught.value.code == "SOURCE_UNAVAILABLE"
+    assert "GITHUB_API_PROXY" in caught.value.message

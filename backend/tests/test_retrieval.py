@@ -48,8 +48,68 @@ def test_bm25_retrieval_end_to_end(database, settings, repo_id):
     assert trace.generation_id is not None
     assert trace.channels["bm25"]["enabled"] is True
     assert trace.channels["vector"] == {"enabled": False, "reason": "not_configured"}
-    assert trace.degraded == []  # not-configured vector is a valid mode, not degradation
+    assert trace.channels["rerank"] == {"enabled": False, "reason": "not_configured"}
+    assert trace.degraded == []  # not-configured channels are a valid mode, not degradation
     assert trace.selected and trace.selected[0]["chunk_id"] == str(results[0].chunk_id)
+
+
+class FakeReranker:
+    def __init__(self, pick: int):
+        self.pick = pick
+        self.calls: list[int] = []
+
+    def rerank(self, query, documents, top_n):
+        self.calls.append(len(documents))
+        return [(self.pick, 0.99)]
+
+
+class BrokenReranker:
+    def rerank(self, query, documents, top_n):
+        raise RuntimeError("rerank unavailable")
+
+
+def test_rerank_reorders_results_and_records_trace(database, settings, repo_id):
+    upload_and_index(database, settings, repo_id, "auth.md", AUTH_DOC)
+    upload_and_index(database, settings, repo_id, "deploy.md", DEPLOY_DOC)
+    settings.rerank_base_url = "http://localhost:9"
+    settings.rerank_model = "fake"
+
+    with database() as db:
+        baseline, _ = retrieve(db, settings, repo_id=repo_id, query="权限发布 maintainer", final_k=2)
+    fake = FakeReranker(pick=1)
+    with database() as db:
+        results, trace = retrieve(
+            db,
+            settings,
+            repo_id=repo_id,
+            query="权限发布 maintainer",
+            final_k=1,
+            rerank_factory=lambda _settings: fake,
+        )
+    assert trace.reranked is True
+    assert trace.channels["rerank"]["enabled"] is True
+    assert trace.degraded == []
+    assert fake.calls and fake.calls[0] >= 2
+    assert len(results) == 1 and results[0].chunk_id == baseline[1].chunk_id
+    assert "rerank" in results[0].scores
+
+
+def test_rerank_failure_degrades_to_rrf(database, settings, repo_id):
+    upload_and_index(database, settings, repo_id, "auth.md", AUTH_DOC)
+    settings.rerank_base_url = "http://localhost:9"
+    settings.rerank_model = "fake"
+    with database() as db:
+        results, trace = retrieve(
+            db,
+            settings,
+            repo_id=repo_id,
+            query="权限模型",
+            rerank_factory=lambda _settings: BrokenReranker(),
+        )
+    assert results
+    assert trace.reranked is False
+    assert "rerank_unavailable" in trace.degraded
+    assert trace.channels["rerank"] == {"enabled": False, "reason": "unavailable"}
 
 
 def test_chinese_and_identifier_queries(database, settings, repo_id):
@@ -134,8 +194,15 @@ def test_vector_channel_fusion_with_fake_store(database, settings, repo_id):
     assert trace.channels["vector"]["enabled"] is True
     ids = [str(item.chunk_id) for item in results]
     assert chunk_b in ids and chunk_a in ids
-    # B is rank 1 in vector and rank 2 (at best) in BM25 -> B first overall.
-    assert ids[0] == chunk_b
+    # Opposite ranks (1, 2) and (2, 1) have equal RRF scores. UUID tie-breaking
+    # must not make this integration test depend on randomly generated IDs.
+    bm25_ranks = {hit["chunk_id"]: rank for rank, hit in enumerate(trace.channels["bm25"]["top"], 1)}
+    expected = {}
+    for rank, chunk_id in enumerate([chunk_b, chunk_a], 1):
+        expected[chunk_id] = 1 / (60 + rank)
+        if chunk_id in bm25_ranks:
+            expected[chunk_id] += 1 / (60 + bm25_ranks[chunk_id])
+    assert [item for item in ids if item in expected] == sorted(expected, key=lambda cid: (-expected[cid], cid))
 
 
 def test_single_channel_degradation(database, settings, repo_id):
@@ -190,3 +257,36 @@ def test_source_type_filter(database, settings, repo_id):
             db, settings, repo_id=repo_id, query="权限", source_types=["source"]
         )
     assert results
+
+
+def test_missing_bm25_without_vector_is_unavailable(database, settings, repo_id):
+    upload_and_index(database, settings, repo_id, "auth.md", AUTH_DOC)
+    with database() as db:
+        generation = db.scalar(select(IndexGeneration).where(IndexGeneration.status == "active"))
+        index_path = settings.storage_root / "indexes" / str(repo_id) / str(generation.id) / "bm25.json"
+        index_path.unlink()
+        with pytest.raises(DomainError) as caught:
+            retrieve(db, settings, repo_id=repo_id, query="权限")
+    assert caught.value.code == "RETRIEVAL_UNAVAILABLE"
+    assert caught.value.status == 503
+
+
+def test_empty_healthy_vector_remains_a_valid_result(database, settings, repo_id):
+    upload_and_index(database, settings, repo_id, "auth.md", AUTH_DOC)
+    settings.embedding_base_url = "http://localhost:9/v1"
+    settings.embedding_model = "fake"
+    settings.milvus_uri = "http://localhost:9"
+
+    def broken_bm25(*_):
+        raise FileNotFoundError("index missing")
+
+    with database() as db:
+        results, trace = retrieve(
+            db, settings, repo_id=repo_id, query="没有相关内容",
+            bm25_loader=broken_bm25,
+            vector_store_factory=lambda _: FakeVectorStore([]),
+            embedding_factory=lambda _: FakeEmbeddings(),
+        )
+    assert results == []
+    assert trace.channels["vector"]["enabled"] is True
+    assert trace.degraded == ["bm25_unavailable"]

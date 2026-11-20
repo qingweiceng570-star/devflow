@@ -158,3 +158,79 @@ def test_older_pending_rows_are_picked_from_prior_failures(database, settings, m
             == 0
         )
         assert db.scalar(select(func.count()).select_from(Document)) == 2
+
+
+def test_vectors_reused_and_old_document_versions_not_reindexed(database, settings):
+    from app.persistence.models import Chunk, Document, DocumentVersion
+    from app.rag.retriever import retrieve
+    from app.services.knowledge_service import request_reindex
+
+    settings.embedding_base_url = "http://localhost:9/v1"
+    settings.embedding_model = "model-a"
+    settings.embedding_dimension = 64
+    settings.milvus_uri = "http://localhost:9"
+    embedded = []
+
+    class Embedder:
+        def embed(self, texts):
+            embedded.extend(texts)
+            return [[0.1] * settings.embedding_dimension for _ in texts]
+
+    class Store:
+        def upsert(self, rows):
+            return len(rows)
+
+        def delete_generation(self, generation_id):
+            return None
+
+    kwargs = {"embedding_factory": lambda _: Embedder(), "vector_store_factory": lambda _: Store()}
+    repo_id = make_repo(database)
+    upload_and_index(database, settings, repo_id, "a.md", DOC_A, **kwargs)
+    first_count = len(embedded)
+    assert first_count > 0
+    upload_and_index(database, settings, repo_id, "b.md", DOC_B, **kwargs)
+    assert len(embedded) == first_count + 1
+
+    upload(database, settings, repo_id, "a.md", b"# A\n\nreplacement new policy\n")
+    with database() as db:
+        results, _ = retrieve(db, settings.model_copy(update={"milvus_uri": ""}), repo_id=repo_id, query="认证")
+        assert results == []  # An old index cannot leak the superseded document.
+    run_index_job(database, settings, repo_id, **kwargs)
+    assert len(embedded) == first_count + 2
+    with database() as db:
+        active = db.scalar(select(IndexGeneration).where(IndexGeneration.status == "active"))
+        assert active.chunk_count == 2
+        assert active.embedding_config["generated_vectors"] == 1
+        assert active.embedding_config["reused_vectors"] == 1
+        assert db.scalar(select(func.count()).select_from(DocumentVersion)) == 3
+        assert db.scalar(select(func.count()).select_from(Chunk)) == 3  # Historical evidence is retained.
+        document = db.scalar(select(Document).where(Document.source_key == "upload:a.md"))
+        from app.persistence.models import Repository
+        repo = db.get(Repository, repo_id)
+        request_reindex(db, settings, repo)
+        assert document is not None
+    # A model switch must invalidate the cache even when content did not change.
+    settings.embedding_model = "model-b"
+    before = len(embedded)
+    run_index_job(database, settings, repo_id, **kwargs)
+    assert len(embedded) == before + 2
+
+
+def test_upload_burst_uses_one_delayed_job(database, settings):
+    from datetime import UTC, datetime
+
+    from app.jobs.queue import claim_next
+    from app.persistence.models import Job
+
+    settings.index_debounce_seconds = 2
+    repo_id = make_repo(database)
+    upload(database, settings, repo_id, "a.md", DOC_A.encode())
+    upload(database, settings, repo_id, "b.md", DOC_B.encode())
+    with database() as db:
+        jobs = db.scalars(select(Job)).all()
+        assert len(jobs) == 1
+        assert claim_next(db, worker_id="w1", lease_seconds=60) is None
+        jobs[0].available_at = datetime.now(UTC)
+        db.commit()
+    result = run_index_job(database, settings, repo_id)
+    assert result["chunks"] == 2

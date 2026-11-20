@@ -7,6 +7,7 @@ root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root / "backend"))
 from app.agents.probe import ProbeAnswer
 from app.agents.pr_review import PRReviewDraft
+from app.agents.specialists import CIDraft, IssueDraft
 from app.core.config import Settings
 from app.domain.contracts import (
     AnalysisResult,
@@ -19,6 +20,10 @@ from app.domain.contracts import (
     ToolResult,
 )
 from app.main import create_app
+from app.workflows.contracts import PlanTask, ReleaseTarget, WeeklyTarget
+from app.services.action_service import ActionInput
+from app.services.memory_service import MemoryInput
+from app.extensions.skills import Skill
 
 settings = Settings(_env_file=None, app_env="test", database_url="sqlite://")
 output = root / "contracts"
@@ -28,7 +33,8 @@ app = create_app(settings, session_factory=lambda: None)
 (output / "domain-schemas.json").write_text(json.dumps({
     model.__name__: model.model_json_schema() for model in [
         RepoScope, ToolResult, Evidence, Finding, Hypothesis, MissingEvidence, NextAction,
-        AnalysisResult, PRReviewDraft, ProbeAnswer,
+        AnalysisResult, PRReviewDraft, ProbeAnswer, IssueDraft, CIDraft,
+        PlanTask, ReleaseTarget, WeeklyTarget, ActionInput, MemoryInput, Skill,
     ]
 }, ensure_ascii=False, indent=2), encoding="utf-8")
 print("Exported OpenAPI and domain JSON schemas.")

@@ -182,7 +182,7 @@ def test_non_retryable_resource_error_records_and_continues(settings, database):
     result = execute(database, settings, fake, run_id, job_id, epoch)
     assert result["status"] == "failed"
     codes = {error["code"] for error in result["errors"]}
-    assert "SOURCE_UNAVAILABLE" in codes
+    assert "GITHUB_RESOURCE_UNAVAILABLE" in codes
     # Later resources still ran after the pulls failure.
     assert result["counts"]["events"]["created"] == 2
     assert result["counts"]["coverage"] == "partial"

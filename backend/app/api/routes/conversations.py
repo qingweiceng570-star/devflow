@@ -39,7 +39,7 @@ def create_conversation(
     db=Depends(get_db),
 ):
     user, _ = identity
-    repo = require_repo(db, user, body.repo_id)[0]
+    repo = require_repo(db, user, body.repo_id, minimum_role="analyst")[0]
     if repo.state != "active":
         raise DomainError("REPO_DISABLED", "仓库已禁用", 409)
     conversation = Conversation(

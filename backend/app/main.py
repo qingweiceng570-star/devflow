@@ -7,13 +7,17 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.api.routes import (
+    analysis_support,
     auth,
     conversations,
     documents,
+    evals,
     evidence,
+    extensions,
     health,
     jobs,
     knowledge,
+    platform,
     repositories,
     runs,
     sync,
@@ -134,6 +138,10 @@ def create_app(settings: Settings | None = None, *, session_factory=None, model_
         runs,
         documents,
         knowledge,
+        platform,
+        extensions,
+        analysis_support,
+        evals,
     ):
         app.include_router(module.router, prefix="/api/v1")
 

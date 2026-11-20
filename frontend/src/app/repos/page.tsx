@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api/client";
+import { normalizeGithubRepository, parseGithubRepository } from "@/lib/github-repository";
 import WorkspaceShell from "@/components/workspace-shell";
 
 type User = { username: string; role: string };
 type Capabilities = { worker_online: boolean };
 type Repo = {
   id: string; full_name: string; default_branch: string | null; state: string; version: number;
-  created_at: string; updated_at: string; created?: boolean;
+  created_at: string; updated_at: string; created?: boolean; latest_sync?: SyncRun | null;
 };
 type ResourceCounts = {
   pages?: number; fetched?: number; created?: number; updated?: number;
@@ -31,23 +32,50 @@ export default function ReposPage() {
   const [caps, setCaps] = useState<Capabilities | null>(null);
   const [repos, setRepos] = useState<Repo[]>([]);
   const [details, setDetails] = useState<Record<string, SyncRun | null>>({});
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const pollTimers = useRef<Record<string, ReturnType<typeof setInterval>>>({});
 
-  const refresh = useCallback(async () => {
-    const list = await api<{ items: Repo[] }>("/repos");
-    setRepos(list.items);
-    const pairs = await Promise.all(
-      list.items.map(async (repo) => {
-        const detail = await api<RepoDetail>(`/repos/${repo.id}`);
-        return [repo.id, detail.latest_sync] as const;
-      }),
-    );
-    setDetails(Object.fromEntries(pairs));
+  const trackActiveRuns = useCallback((items: Repo[]) => {
+    for (const repo of items) {
+      const run = repo.latest_sync;
+      if (run && ["queued", "running"].includes(run.status)) watchRun(repo.id);
+    }
   }, []);
+
+  const refresh = useCallback(async () => {
+    const list = await api<{ items: Repo[]; next_cursor: string | null }>("/repos");
+    setRepos(list.items);
+    setNextCursor(list.next_cursor);
+    setDetails(Object.fromEntries(list.items.map((repo) => [repo.id, repo.latest_sync ?? null])));
+    trackActiveRuns(list.items);
+  }, [trackActiveRuns]);
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true); setError("");
+    try {
+      const page = await api<{ items: Repo[]; next_cursor: string | null }>(
+        `/repos?cursor=${encodeURIComponent(nextCursor)}`,
+      );
+      setRepos((current) => [...current, ...page.items]);
+      setDetails((current) => ({
+        ...current,
+        ...Object.fromEntries(page.items.map((repo) => [repo.id, repo.latest_sync ?? null])),
+      }));
+      setNextCursor(page.next_cursor);
+      trackActiveRuns(page.items);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) router.replace("/login");
+      else setError(err instanceof Error ? err.message : "加载更多失败");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -92,10 +120,14 @@ export default function ReposPage() {
 
   async function addRepo(event: React.FormEvent) {
     event.preventDefault();
-    if (!fullName.trim()) return;
+    const parsed = parseGithubRepository(fullName);
+    if (!parsed.ok) {
+      setError(parsed.message);
+      return;
+    }
     setBusy("add"); setError("");
     try {
-      await api<Repo>("/repos", { full_name: fullName.trim() });
+      await api<Repo>("/repos", { full_name: parsed.fullName });
       setFullName("");
       await refresh();
     } catch (err) {
@@ -144,6 +176,7 @@ export default function ReposPage() {
 
   if (loading) return <main className="loading" aria-live="polite">正在打开工作空间…</main>;
   const syncing = Object.values(details).filter((run) => run && ["queued", "running"].includes(run.status)).length;
+  const preview = normalizeGithubRepository(fullName);
   return <WorkspaceShell
     user={user}
     active="repos"
@@ -153,28 +186,30 @@ export default function ReposPage() {
     <header>
       <div>
         <p className="eyebrow">REPOSITORIES / M1</p>
-        <h1>接入仓库，沉淀证据。</h1>
-        <p className="muted">同步 Issue、PR、Review、CI 与活动事件；Worker 按队列执行，全部只读。</p>
+        <h1>仓库协作</h1>
+        <p className="muted">连接项目，集中管理代码、问题与分析。</p>
       </div>
       <span className="pill">本地工作空间</span>
     </header>
     {error && <div role="alert" className="error-box">{error} <button className="link-button" onClick={() => setError("")}>关闭</button></div>}
     <section className="status-grid" aria-label="同步状态">
-      <Status label="已接入仓库" value={String(repos.length)} detail="按 GitHub 仓库 ID 去重" good={repos.length > 0} />
-      <Status label="同步中的任务" value={String(syncing)} detail="每仓库同资源串行执行" good={syncing === 0} />
-      <Status label="任务进程" value={caps?.worker_online ? "在线" : "等待启动"} detail="租约队列 · 心跳检测" good={!!caps?.worker_online} />
+      <Status label="已接入仓库" value={nextCursor ? `${repos.length}+` : String(repos.length)} detail="你的项目" good={repos.length > 0} />
+      <Status label="同步中的任务" value={String(syncing)} detail="后台持续更新项目数据" good={syncing === 0} />
+      <Status label="任务进程" value={caps?.worker_online ? "在线" : "等待启动"} detail="负责同步与分析" good={!!caps?.worker_online} />
     </section>
     <section className="panel">
       <div className="panel-heading"><div><span className="section-number">01</span><h2>添加仓库</h2></div><span className="tag">只读接入</span></div>
       <form className="repo-form" onSubmit={addRepo}>
-        <label htmlFor="repo-name">仓库（owner/repo）
-          <input id="repo-name" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="例如 simonw/ttok" autoComplete="off" />
+        <label htmlFor="repo-name">GitHub 仓库链接或 owner/repo
+          <input id="repo-name" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="https://github.com/simonw/ttok" autoComplete="off" spellCheck={false} aria-describedby="repo-name-help" />
+          <span id="repo-name-help" className="form-hint">支持仓库主页、子页面链接、git clone 命令和 .git 克隆地址；系统会自动识别为 owner/repo。</span>
+          {fullName.trim() && preview && <span className="repo-normalized" role="status">将导入：{preview}</span>}
         </label>
         <button className="button primary" disabled={busy === "add" || !fullName.trim()}>
-          {busy === "add" ? "正在验证…" : "接入仓库"}
+          {busy === "add" ? "正在检查…" : "接入仓库"}
         </button>
       </form>
-      <p className="hint">公开仓库可以匿名只读；访问私有仓库需要在本地 .env 配置 GITHUB_READ_TOKEN 后重启后端。凭据不会进入浏览器或日志。</p>
+      <details className="inline-help"><summary>私有仓库如何接入？</summary><p className="hint">在本地 .env 配置 GITHUB_READ_TOKEN 后重启后端。</p></details>
     </section>
     <section className="panel">
       <div className="panel-heading"><div><span className="section-number">02</span><h2>仓库列表</h2></div><button className="link-button" onClick={() => refresh().catch((err) => setError(err instanceof Error ? err.message : "刷新失败"))}>刷新</button></div>
@@ -216,6 +251,11 @@ export default function ReposPage() {
           </li>;
         })}
       </ul>}
+      {nextCursor && <div className="repo-more">
+        <button className="button secondary" onClick={loadMore} disabled={loadingMore}>
+          {loadingMore ? "加载中…" : "加载更多"}
+        </button>
+      </div>}
     </section>
   </WorkspaceShell>;
 }

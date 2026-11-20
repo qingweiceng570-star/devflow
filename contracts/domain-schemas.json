@@ -628,6 +628,11 @@
     },
     "additionalProperties": false,
     "properties": {
+      "details": {
+        "additionalProperties": true,
+        "title": "Details",
+        "type": "object"
+      },
       "schema_version": {
         "const": "1.0",
         "default": "1.0",
@@ -995,6 +1000,1088 @@
       "evidence_id"
     ],
     "title": "ProbeAnswer",
+    "type": "object"
+  },
+  "IssueDraft": {
+    "$defs": {
+      "Candidate": {
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "value",
+          "reason",
+          "evidence_ids"
+        ],
+        "title": "Candidate",
+        "type": "object"
+      },
+      "Finding": {
+        "additionalProperties": false,
+        "properties": {
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "info"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "claim": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Claim",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "location": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Location",
+            "type": "string"
+          },
+          "suggestion": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Suggestion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "claim",
+          "evidence_ids",
+          "location",
+          "suggestion"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
+      "Hypothesis": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Claim",
+            "type": "string"
+          },
+          "supporting_evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Supporting Evidence Ids",
+            "type": "array"
+          },
+          "counter_evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Counter Evidence Ids",
+            "type": "array"
+          },
+          "verification_steps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Verification Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "claim"
+        ],
+        "title": "Hypothesis",
+        "type": "object"
+      },
+      "MissingEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "item": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Item",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "impact": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Impact",
+            "type": "string"
+          },
+          "next_action": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Next Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item",
+          "reason",
+          "impact",
+          "next_action"
+        ],
+        "title": "MissingEvidence",
+        "type": "object"
+      },
+      "NextAction": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "owner_hint": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Owner Hint"
+          },
+          "draft_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Draft Id"
+          }
+        },
+        "required": [
+          "description"
+        ],
+        "title": "NextAction",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "summary": {
+        "maxLength": 4000,
+        "minLength": 1,
+        "title": "Summary",
+        "type": "string"
+      },
+      "findings": {
+        "items": {
+          "$ref": "#/$defs/Finding"
+        },
+        "title": "Findings",
+        "type": "array"
+      },
+      "hypotheses": {
+        "items": {
+          "$ref": "#/$defs/Hypothesis"
+        },
+        "title": "Hypotheses",
+        "type": "array"
+      },
+      "missing_evidence": {
+        "items": {
+          "$ref": "#/$defs/MissingEvidence"
+        },
+        "title": "Missing Evidence",
+        "type": "array"
+      },
+      "next_actions": {
+        "items": {
+          "$ref": "#/$defs/NextAction"
+        },
+        "title": "Next Actions",
+        "type": "array"
+      },
+      "limitations": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Limitations",
+        "type": "array"
+      },
+      "category": {
+        "default": "unknown",
+        "enum": [
+          "bug",
+          "feature",
+          "question",
+          "documentation",
+          "maintenance",
+          "unknown"
+        ],
+        "title": "Category",
+        "type": "string"
+      },
+      "priority": {
+        "default": "unknown",
+        "enum": [
+          "P0",
+          "P1",
+          "P2",
+          "P3",
+          "unknown"
+        ],
+        "title": "Priority",
+        "type": "string"
+      },
+      "priority_reason": {
+        "default": "影响信息不足",
+        "maxLength": 500,
+        "title": "Priority Reason",
+        "type": "string"
+      },
+      "priority_evidence_ids": {
+        "items": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "maxItems": 5,
+        "title": "Priority Evidence Ids",
+        "type": "array"
+      },
+      "complexity": {
+        "default": "unknown",
+        "enum": [
+          "small",
+          "medium",
+          "large",
+          "unknown"
+        ],
+        "title": "Complexity",
+        "type": "string"
+      },
+      "reproduction": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 10,
+        "title": "Reproduction",
+        "type": "array"
+      },
+      "missing_fields": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 10,
+        "title": "Missing Fields",
+        "type": "array"
+      },
+      "owner_candidates": {
+        "items": {
+          "$ref": "#/$defs/Candidate"
+        },
+        "maxItems": 5,
+        "title": "Owner Candidates",
+        "type": "array"
+      },
+      "duplicate_candidates": {
+        "items": {
+          "$ref": "#/$defs/Candidate"
+        },
+        "maxItems": 5,
+        "title": "Duplicate Candidates",
+        "type": "array"
+      }
+    },
+    "required": [
+      "summary"
+    ],
+    "title": "IssueDraft",
+    "type": "object"
+  },
+  "CIDraft": {
+    "$defs": {
+      "Finding": {
+        "additionalProperties": false,
+        "properties": {
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "info"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "claim": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Claim",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "location": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Location",
+            "type": "string"
+          },
+          "suggestion": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Suggestion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "claim",
+          "evidence_ids",
+          "location",
+          "suggestion"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
+      "Hypothesis": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Claim",
+            "type": "string"
+          },
+          "supporting_evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Supporting Evidence Ids",
+            "type": "array"
+          },
+          "counter_evidence_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Counter Evidence Ids",
+            "type": "array"
+          },
+          "verification_steps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Verification Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "claim"
+        ],
+        "title": "Hypothesis",
+        "type": "object"
+      },
+      "MissingEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "item": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Item",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "impact": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Impact",
+            "type": "string"
+          },
+          "next_action": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Next Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item",
+          "reason",
+          "impact",
+          "next_action"
+        ],
+        "title": "MissingEvidence",
+        "type": "object"
+      },
+      "NextAction": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "owner_hint": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Owner Hint"
+          },
+          "draft_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Draft Id"
+          }
+        },
+        "required": [
+          "description"
+        ],
+        "title": "NextAction",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "summary": {
+        "maxLength": 4000,
+        "minLength": 1,
+        "title": "Summary",
+        "type": "string"
+      },
+      "findings": {
+        "items": {
+          "$ref": "#/$defs/Finding"
+        },
+        "title": "Findings",
+        "type": "array"
+      },
+      "hypotheses": {
+        "items": {
+          "$ref": "#/$defs/Hypothesis"
+        },
+        "title": "Hypotheses",
+        "type": "array"
+      },
+      "missing_evidence": {
+        "items": {
+          "$ref": "#/$defs/MissingEvidence"
+        },
+        "title": "Missing Evidence",
+        "type": "array"
+      },
+      "next_actions": {
+        "items": {
+          "$ref": "#/$defs/NextAction"
+        },
+        "title": "Next Actions",
+        "type": "array"
+      },
+      "limitations": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Limitations",
+        "type": "array"
+      },
+      "cause_category": {
+        "default": "unknown",
+        "enum": [
+          "code",
+          "test",
+          "dependency",
+          "environment",
+          "resource",
+          "unknown"
+        ],
+        "title": "Cause Category",
+        "type": "string"
+      },
+      "verification_steps": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 10,
+        "title": "Verification Steps",
+        "type": "array"
+      },
+      "fix_suggestions": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 10,
+        "title": "Fix Suggestions",
+        "type": "array"
+      }
+    },
+    "required": [
+      "summary"
+    ],
+    "title": "CIDraft",
+    "type": "object"
+  },
+  "PlanTask": {
+    "additionalProperties": false,
+    "properties": {
+      "key": {
+        "pattern": "^[a-z][a-z0-9_]{0,39}$",
+        "title": "Key",
+        "type": "string"
+      },
+      "agent": {
+        "enum": [
+          "pr_review",
+          "ci_debug",
+          "issue_triage",
+          "knowledge_qa"
+        ],
+        "title": "Agent",
+        "type": "string"
+      },
+      "target": {
+        "additionalProperties": true,
+        "title": "Target",
+        "type": "object"
+      },
+      "depends_on": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 8,
+        "title": "Depends On",
+        "type": "array"
+      },
+      "required": {
+        "default": true,
+        "title": "Required",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "key",
+      "agent"
+    ],
+    "title": "PlanTask",
+    "type": "object"
+  },
+  "ReleaseTarget": {
+    "$defs": {
+      "PlanTask": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Key",
+            "type": "string"
+          },
+          "agent": {
+            "enum": [
+              "pr_review",
+              "ci_debug",
+              "issue_triage",
+              "knowledge_qa"
+            ],
+            "title": "Agent",
+            "type": "string"
+          },
+          "target": {
+            "additionalProperties": true,
+            "title": "Target",
+            "type": "object"
+          },
+          "depends_on": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Depends On",
+            "type": "array"
+          },
+          "required": {
+            "default": true,
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "agent"
+        ],
+        "title": "PlanTask",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "observer_rounds": {
+        "default": 1,
+        "maximum": 1,
+        "minimum": 0,
+        "title": "Observer Rounds",
+        "type": "integer"
+      },
+      "pr_number": {
+        "minimum": 1,
+        "title": "Pr Number",
+        "type": "integer"
+      },
+      "ci_run_id": {
+        "anyOf": [
+          {
+            "minimum": 1,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Ci Run Id"
+      },
+      "attempt": {
+        "anyOf": [
+          {
+            "minimum": 1,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Attempt"
+      },
+      "tasks": {
+        "items": {
+          "$ref": "#/$defs/PlanTask"
+        },
+        "maxItems": 8,
+        "title": "Tasks",
+        "type": "array"
+      }
+    },
+    "required": [
+      "pr_number"
+    ],
+    "title": "ReleaseTarget",
+    "type": "object"
+  },
+  "WeeklyTarget": {
+    "additionalProperties": false,
+    "properties": {
+      "period_start": {
+        "format": "date-time",
+        "title": "Period Start",
+        "type": "string"
+      },
+      "period_end": {
+        "format": "date-time",
+        "title": "Period End",
+        "type": "string"
+      },
+      "timezone": {
+        "default": "Asia/Shanghai",
+        "maxLength": 80,
+        "title": "Timezone",
+        "type": "string"
+      }
+    },
+    "required": [
+      "period_start",
+      "period_end"
+    ],
+    "title": "WeeklyTarget",
+    "type": "object"
+  },
+  "ActionInput": {
+    "additionalProperties": false,
+    "properties": {
+      "action": {
+        "enum": [
+          "create_issue_comment",
+          "add_labels",
+          "create_issue",
+          "close_issue"
+        ],
+        "title": "Action",
+        "type": "string"
+      },
+      "number": {
+        "anyOf": [
+          {
+            "minimum": 1,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Number"
+      },
+      "title": {
+        "anyOf": [
+          {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Title"
+      },
+      "body": {
+        "anyOf": [
+          {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Body"
+      },
+      "labels": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 20,
+        "title": "Labels",
+        "type": "array"
+      },
+      "state_reason": {
+        "default": "completed",
+        "enum": [
+          "completed",
+          "not_planned"
+        ],
+        "title": "State Reason",
+        "type": "string"
+      },
+      "expected_head_sha": {
+        "anyOf": [
+          {
+            "pattern": "^[a-f0-9]{40}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Expected Head Sha"
+      }
+    },
+    "required": [
+      "action"
+    ],
+    "title": "ActionInput",
+    "type": "object"
+  },
+  "MemoryInput": {
+    "additionalProperties": false,
+    "properties": {
+      "run_id": {
+        "format": "uuid",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "key": {
+        "maxLength": 120,
+        "minLength": 1,
+        "title": "Key",
+        "type": "string"
+      },
+      "content": {
+        "maxLength": 3000,
+        "minLength": 1,
+        "title": "Content",
+        "type": "string"
+      },
+      "evidence_ids": {
+        "items": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "maxItems": 20,
+        "minItems": 1,
+        "title": "Evidence Ids",
+        "type": "array"
+      },
+      "paths": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 20,
+        "title": "Paths",
+        "type": "array"
+      },
+      "commit_sha": {
+        "anyOf": [
+          {
+            "pattern": "^[a-f0-9]{40}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Commit Sha"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "title": "Expires At",
+        "type": "string"
+      }
+    },
+    "required": [
+      "run_id",
+      "key",
+      "content",
+      "evidence_ids",
+      "expires_at"
+    ],
+    "title": "MemoryInput",
+    "type": "object"
+  },
+  "Skill": {
+    "$defs": {
+      "SkillStep": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "tool",
+              "condition",
+              "transform",
+              "agent"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tool"
+          },
+          "arguments": {
+            "additionalProperties": true,
+            "title": "Arguments",
+            "type": "object"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source"
+          },
+          "equals": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Equals"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "When"
+          },
+          "agent": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pr_review",
+                  "ci_debug",
+                  "issue_triage",
+                  "knowledge_qa"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "title": "SkillStep",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "description": {
+        "maxLength": 1000,
+        "minLength": 1,
+        "title": "Description",
+        "type": "string"
+      },
+      "input_schema": {
+        "additionalProperties": true,
+        "title": "Input Schema",
+        "type": "object"
+      },
+      "allowed_tools": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 30,
+        "title": "Allowed Tools",
+        "type": "array"
+      },
+      "steps": {
+        "items": {
+          "$ref": "#/$defs/SkillStep"
+        },
+        "maxItems": 12,
+        "minItems": 1,
+        "title": "Steps",
+        "type": "array"
+      },
+      "output_schema": {
+        "additionalProperties": true,
+        "title": "Output Schema",
+        "type": "object"
+      },
+      "max_steps": {
+        "default": 12,
+        "maximum": 12,
+        "minimum": 1,
+        "title": "Max Steps",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "description",
+      "input_schema",
+      "allowed_tools",
+      "steps",
+      "output_schema"
+    ],
+    "title": "Skill",
     "type": "object"
   }
 }

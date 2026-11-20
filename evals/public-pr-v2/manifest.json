@@ -1,0 +1,14 @@
+{
+  "version": "2.0",
+  "captured_at": "2026-10-26T02:09:56.336454+00:00",
+  "split": "development",
+  "cases": [
+    {
+      "id": "psf-requests-pr-6655",
+      "file": "psf-requests-pr-6655.json",
+      "sha256": "444fa2419f142ffddd04d2f9877a1e9f1412922697daa2528a3e7ed828e71806"
+    }
+  ],
+  "origin": "public_github_snapshot",
+  "model_requests": 0
+}

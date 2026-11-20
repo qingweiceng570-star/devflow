@@ -26,6 +26,7 @@ def settings(tmp_path):
         database_url="sqlite://",
         llm_provider="openai_compatible",
         storage_root=tmp_path,
+        index_debounce_seconds=0,
     )
 
 

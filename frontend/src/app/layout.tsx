@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./refined.css";
 
 export const metadata: Metadata = { title: "DevFlow AI · 研发协作", description: "有证据、可核查的研发协作助手" };
 

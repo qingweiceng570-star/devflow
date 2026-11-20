@@ -1,0 +1,1254 @@
+{
+  "version": "1.0",
+  "purpose": "Deterministic boundary/retrieval regression, not model-answer quality scoring",
+  "cases": [
+    {
+      "id": "pr-01",
+      "group": "pr",
+      "split": "regression",
+      "question": "all constraints satisfied",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "suggested": "recommend_merge",
+        "facts": {
+          "coverage": "complete",
+          "freshness": "fresh",
+          "mergeable": true,
+          "required_checks_configured": true,
+          "required_checks_passed": true
+        }
+      },
+      "expected": {
+        "verdict": "recommend_merge"
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_pr",
+        "get_pr_diff",
+        "get_ci_runs"
+      ],
+      "forbidden_claims": [
+        "Do not promote incomplete or stale evidence"
+      ]
+    },
+    {
+      "id": "pr-02",
+      "group": "pr",
+      "split": "development",
+      "question": "high risk",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "suggested": "recommend_merge",
+        "facts": {
+          "coverage": "complete",
+          "freshness": "fresh",
+          "mergeable": true,
+          "required_checks_configured": true,
+          "required_checks_passed": true,
+          "blocking_findings": 1
+        }
+      },
+      "expected": {
+        "verdict": "hold"
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_pr",
+        "get_pr_diff",
+        "get_ci_runs"
+      ],
+      "forbidden_claims": [
+        "Do not promote incomplete or stale evidence"
+      ]
+    },
+    {
+      "id": "pr-03",
+      "group": "pr",
+      "split": "development",
+      "question": "partial diff",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "suggested": "recommend_merge",
+        "facts": {
+          "coverage": "partial",
+          "freshness": "fresh",
+          "mergeable": true,
+          "required_checks_configured": true,
+          "required_checks_passed": true
+        }
+      },
+      "expected": {
+        "verdict": "insufficient_evidence"
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_pr",
+        "get_pr_diff",
+        "get_ci_runs"
+      ],
+      "forbidden_claims": [
+        "Do not promote incomplete or stale evidence"
+      ]
+    },
+    {
+      "id": "pr-04",
+      "group": "pr",
+      "split": "regression",
+      "question": "head changed",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "suggested": "recommend_merge",
+        "facts": {
+          "coverage": "complete",
+          "freshness": "stale",
+          "mergeable": true,
+          "required_checks_configured": true,
+          "required_checks_passed": true
+        }
+      },
+      "expected": {
+        "verdict": "insufficient_evidence"
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_pr",
+        "get_pr_diff",
+        "get_ci_runs"
+      ],
+      "forbidden_claims": [
+        "Do not promote incomplete or stale evidence"
+      ]
+    },
+    {
+      "id": "pr-05",
+      "group": "pr",
+      "split": "development",
+      "question": "draft PR",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "suggested": "recommend_merge",
+        "facts": {
+          "coverage": "complete",
+          "freshness": "fresh",
+          "mergeable": true,
+          "required_checks_configured": true,
+          "required_checks_passed": true,
+          "draft": true
+        }
+      },
+      "expected": {
+        "verdict": "hold"
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_pr",
+        "get_pr_diff",
+        "get_ci_runs"
+      ],
+      "forbidden_claims": [
+        "Do not promote incomplete or stale evidence"
+      ]
+    },
+    {
+      "id": "pr-06",
+      "group": "pr",
+      "split": "development",
+      "question": "merge conflict",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "suggested": "recommend_merge",
+        "facts": {
+          "coverage": "complete",
+          "freshness": "fresh",
+          "mergeable": false,
+          "required_checks_configured": true,
+          "required_checks_passed": true
+        }
+      },
+      "expected": {
+        "verdict": "hold"
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_pr",
+        "get_pr_diff",
+        "get_ci_runs"
+      ],
+      "forbidden_claims": [
+        "Do not promote incomplete or stale evidence"
+      ]
+    },
+    {
+      "id": "pr-07",
+      "group": "pr",
+      "split": "regression",
+      "question": "merge status unknown",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "suggested": "recommend_merge",
+        "facts": {
+          "coverage": "complete",
+          "freshness": "fresh",
+          "mergeable": null,
+          "required_checks_configured": true,
+          "required_checks_passed": true
+        }
+      },
+      "expected": {
+        "verdict": "insufficient_evidence"
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_pr",
+        "get_pr_diff",
+        "get_ci_runs"
+      ],
+      "forbidden_claims": [
+        "Do not promote incomplete or stale evidence"
+      ]
+    },
+    {
+      "id": "pr-08",
+      "group": "pr",
+      "split": "development",
+      "question": "no required checks policy",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "suggested": "recommend_merge",
+        "facts": {
+          "coverage": "complete",
+          "freshness": "fresh",
+          "mergeable": true,
+          "required_checks_configured": false,
+          "required_checks_passed": true
+        }
+      },
+      "expected": {
+        "verdict": "insufficient_evidence"
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_pr",
+        "get_pr_diff",
+        "get_ci_runs"
+      ],
+      "forbidden_claims": [
+        "Do not promote incomplete or stale evidence"
+      ]
+    },
+    {
+      "id": "pr-09",
+      "group": "pr",
+      "split": "development",
+      "question": "required check failed",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "suggested": "recommend_merge",
+        "facts": {
+          "coverage": "complete",
+          "freshness": "fresh",
+          "mergeable": true,
+          "required_checks_configured": true,
+          "required_checks_passed": false
+        }
+      },
+      "expected": {
+        "verdict": "hold"
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_pr",
+        "get_pr_diff",
+        "get_ci_runs"
+      ],
+      "forbidden_claims": [
+        "Do not promote incomplete or stale evidence"
+      ]
+    },
+    {
+      "id": "pr-10",
+      "group": "pr",
+      "split": "regression",
+      "question": "never promote model hold",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "suggested": "hold",
+        "facts": {
+          "coverage": "complete",
+          "freshness": "fresh",
+          "mergeable": true,
+          "required_checks_configured": true,
+          "required_checks_passed": true
+        }
+      },
+      "expected": {
+        "verdict": "hold"
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_pr",
+        "get_pr_diff",
+        "get_ci_runs"
+      ],
+      "forbidden_claims": [
+        "Do not promote incomplete or stale evidence"
+      ]
+    },
+    {
+      "id": "ci-01",
+      "group": "ci",
+      "split": "development",
+      "question": "assertion failure",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "log": "setup\nAssertionError: expected 2\nexit code 1"
+      },
+      "expected": {
+        "contains": [
+          "AssertionError"
+        ],
+        "min_blocks": 1
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_analysis_target"
+      ],
+      "forbidden_claims": [
+        "No root cause without logs",
+        "Never reproduce credentials"
+      ]
+    },
+    {
+      "id": "ci-02",
+      "group": "ci",
+      "split": "development",
+      "question": "dependency failure",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "log": "install\nERROR dependency download failed"
+      },
+      "expected": {
+        "contains": [
+          "download failed"
+        ],
+        "min_blocks": 1
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_analysis_target"
+      ],
+      "forbidden_claims": [
+        "No root cause without logs",
+        "Never reproduce credentials"
+      ]
+    },
+    {
+      "id": "ci-03",
+      "group": "ci",
+      "split": "regression",
+      "question": "secret redaction",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "log": "password=should-never-leak\nERROR failed"
+      },
+      "expected": {
+        "contains": [
+          "[REDACTED]"
+        ],
+        "absent": [
+          "should-never-leak"
+        ]
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_analysis_target"
+      ],
+      "forbidden_claims": [
+        "No root cause without logs",
+        "Never reproduce credentials"
+      ]
+    },
+    {
+      "id": "ci-04",
+      "group": "ci",
+      "split": "development",
+      "question": "ansi escape",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "log": "\u001b[31mERROR\u001b[0m timeout"
+      },
+      "expected": {
+        "contains": [
+          "ERROR timeout"
+        ],
+        "absent": [
+          "\u001b"
+        ]
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_analysis_target"
+      ],
+      "forbidden_claims": [
+        "No root cause without logs",
+        "Never reproduce credentials"
+      ]
+    },
+    {
+      "id": "ci-05",
+      "group": "ci",
+      "split": "development",
+      "question": "zip rejection",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "log": "PK\u0003\u0004payload"
+      },
+      "expected": {
+        "truncated": true
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_analysis_target"
+      ],
+      "forbidden_claims": [
+        "No root cause without logs",
+        "Never reproduce credentials"
+      ]
+    },
+    {
+      "id": "ci-06",
+      "group": "ci",
+      "split": "regression",
+      "question": "empty log",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "log": ""
+      },
+      "expected": {
+        "min_blocks": 0,
+        "truncated": false
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_analysis_target"
+      ],
+      "forbidden_claims": [
+        "No root cause without logs",
+        "Never reproduce credentials"
+      ]
+    },
+    {
+      "id": "ci-07",
+      "group": "ci",
+      "split": "development",
+      "question": "unicode log",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "log": "初始化\nERROR 测试失败"
+      },
+      "expected": {
+        "contains": [
+          "测试失败"
+        ],
+        "min_blocks": 1
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_analysis_target"
+      ],
+      "forbidden_claims": [
+        "No root cause without logs",
+        "Never reproduce credentials"
+      ]
+    },
+    {
+      "id": "ci-08",
+      "group": "ci",
+      "split": "development",
+      "question": "long line truncated",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "log": "ERROR zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+      },
+      "expected": {
+        "truncated": true,
+        "min_blocks": 1
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_analysis_target"
+      ],
+      "forbidden_claims": [
+        "No root cause without logs",
+        "Never reproduce credentials"
+      ]
+    },
+    {
+      "id": "issue-01",
+      "group": "issue",
+      "split": "regression",
+      "question": "valid source",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "draft": {
+          "summary": "Synthetic issue risk",
+          "findings": [
+            {
+              "severity": "medium",
+              "claim": "fixture statement",
+              "evidence_ids": [
+                "00000000-0000-0000-0000-000000000001"
+              ],
+              "location": "issue #1",
+              "suggestion": "verify reproduction"
+            }
+          ]
+        },
+        "valid_evidence": [
+          "00000000-0000-0000-0000-000000000001"
+        ]
+      },
+      "expected": {
+        "citations": [
+          "00000000-0000-0000-0000-000000000001"
+        ]
+      },
+      "required_evidence": [
+        "00000000-0000-0000-0000-000000000001"
+      ],
+      "allowed_tools": [
+        "get_issue"
+      ],
+      "forbidden_claims": [
+        "No uncollected or foreign citation"
+      ]
+    },
+    {
+      "id": "issue-02",
+      "group": "issue",
+      "split": "development",
+      "question": "foreign source",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "draft": {
+          "summary": "Synthetic issue risk",
+          "findings": [
+            {
+              "severity": "medium",
+              "claim": "fixture statement",
+              "evidence_ids": [
+                "00000000-0000-0000-0000-000000000002"
+              ],
+              "location": "issue #1",
+              "suggestion": "verify reproduction"
+            }
+          ]
+        },
+        "valid_evidence": [
+          "00000000-0000-0000-0000-000000000001"
+        ]
+      },
+      "expected": {
+        "citations": []
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_issue"
+      ],
+      "forbidden_claims": [
+        "No uncollected or foreign citation"
+      ]
+    },
+    {
+      "id": "issue-03",
+      "group": "issue",
+      "split": "development",
+      "question": "mixed refs",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "draft": {
+          "summary": "Synthetic issue risk",
+          "findings": [
+            {
+              "severity": "medium",
+              "claim": "fixture statement",
+              "evidence_ids": [
+                "00000000-0000-0000-0000-000000000001",
+                "00000000-0000-0000-0000-000000000002"
+              ],
+              "location": "issue #1",
+              "suggestion": "verify reproduction"
+            }
+          ]
+        },
+        "valid_evidence": [
+          "00000000-0000-0000-0000-000000000001"
+        ]
+      },
+      "expected": {
+        "citations": [
+          "00000000-0000-0000-0000-000000000001"
+        ]
+      },
+      "required_evidence": [
+        "00000000-0000-0000-0000-000000000001"
+      ],
+      "allowed_tools": [
+        "get_issue"
+      ],
+      "forbidden_claims": [
+        "No uncollected or foreign citation"
+      ]
+    },
+    {
+      "id": "issue-04",
+      "group": "issue",
+      "split": "regression",
+      "question": "no collected refs",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "draft": {
+          "summary": "Synthetic issue risk",
+          "findings": [
+            {
+              "severity": "medium",
+              "claim": "fixture statement",
+              "evidence_ids": [
+                "00000000-0000-0000-0000-000000000001"
+              ],
+              "location": "issue #1",
+              "suggestion": "verify reproduction"
+            }
+          ]
+        },
+        "valid_evidence": []
+      },
+      "expected": {
+        "citations": []
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_issue"
+      ],
+      "forbidden_claims": [
+        "No uncollected or foreign citation"
+      ]
+    },
+    {
+      "id": "issue-05",
+      "group": "issue",
+      "split": "development",
+      "question": "two valid refs",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "draft": {
+          "summary": "Synthetic issue risk",
+          "findings": [
+            {
+              "severity": "medium",
+              "claim": "fixture statement",
+              "evidence_ids": [
+                "00000000-0000-0000-0000-000000000001",
+                "00000000-0000-0000-0000-000000000002"
+              ],
+              "location": "issue #1",
+              "suggestion": "verify reproduction"
+            }
+          ]
+        },
+        "valid_evidence": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002"
+        ]
+      },
+      "expected": {
+        "citations": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002"
+        ]
+      },
+      "required_evidence": [
+        "00000000-0000-0000-0000-000000000001",
+        "00000000-0000-0000-0000-000000000002"
+      ],
+      "allowed_tools": [
+        "get_issue"
+      ],
+      "forbidden_claims": [
+        "No uncollected or foreign citation"
+      ]
+    },
+    {
+      "id": "issue-06",
+      "group": "issue",
+      "split": "development",
+      "question": "different active repo",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "draft": {
+          "summary": "Synthetic issue risk",
+          "findings": [
+            {
+              "severity": "medium",
+              "claim": "fixture statement",
+              "evidence_ids": [
+                "00000000-0000-0000-0000-000000000001"
+              ],
+              "location": "issue #1",
+              "suggestion": "verify reproduction"
+            }
+          ]
+        },
+        "valid_evidence": [
+          "00000000-0000-0000-0000-000000000002"
+        ]
+      },
+      "expected": {
+        "citations": []
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "get_issue"
+      ],
+      "forbidden_claims": [
+        "No uncollected or foreign citation"
+      ]
+    },
+    {
+      "id": "knowledge-01",
+      "group": "knowledge",
+      "split": "regression",
+      "question": "retrieve csrf",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "question": "csrf",
+        "documents": [
+          {
+            "id": "auth",
+            "text": "authentication csrf session login password"
+          },
+          {
+            "id": "queue",
+            "text": "worker queue lease recovery heartbeat"
+          },
+          {
+            "id": "rag",
+            "text": "knowledge search BM25 retrieval document index"
+          }
+        ],
+        "allowed_ids": [
+          "auth",
+          "queue",
+          "rag"
+        ]
+      },
+      "expected": {
+        "relevant_ids": [
+          "auth"
+        ]
+      },
+      "required_evidence": [
+        "auth"
+      ],
+      "allowed_tools": [
+        "search_knowledge"
+      ],
+      "forbidden_claims": [
+        "No out-of-scope recall",
+        "No invented match"
+      ]
+    },
+    {
+      "id": "knowledge-02",
+      "group": "knowledge",
+      "split": "development",
+      "question": "retrieve heartbeat",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "question": "heartbeat",
+        "documents": [
+          {
+            "id": "auth",
+            "text": "authentication csrf session login password"
+          },
+          {
+            "id": "queue",
+            "text": "worker queue lease recovery heartbeat"
+          },
+          {
+            "id": "rag",
+            "text": "knowledge search BM25 retrieval document index"
+          }
+        ],
+        "allowed_ids": [
+          "auth",
+          "queue",
+          "rag"
+        ]
+      },
+      "expected": {
+        "relevant_ids": [
+          "queue"
+        ]
+      },
+      "required_evidence": [
+        "queue"
+      ],
+      "allowed_tools": [
+        "search_knowledge"
+      ],
+      "forbidden_claims": [
+        "No out-of-scope recall",
+        "No invented match"
+      ]
+    },
+    {
+      "id": "knowledge-03",
+      "group": "knowledge",
+      "split": "development",
+      "question": "retrieve BM25",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "question": "BM25",
+        "documents": [
+          {
+            "id": "auth",
+            "text": "authentication csrf session login password"
+          },
+          {
+            "id": "queue",
+            "text": "worker queue lease recovery heartbeat"
+          },
+          {
+            "id": "rag",
+            "text": "knowledge search BM25 retrieval document index"
+          }
+        ],
+        "allowed_ids": [
+          "auth",
+          "queue",
+          "rag"
+        ]
+      },
+      "expected": {
+        "relevant_ids": [
+          "rag"
+        ]
+      },
+      "required_evidence": [
+        "rag"
+      ],
+      "allowed_tools": [
+        "search_knowledge"
+      ],
+      "forbidden_claims": [
+        "No out-of-scope recall",
+        "No invented match"
+      ]
+    },
+    {
+      "id": "knowledge-04",
+      "group": "knowledge",
+      "split": "regression",
+      "question": "retrieve session login",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "question": "session login",
+        "documents": [
+          {
+            "id": "auth",
+            "text": "authentication csrf session login password"
+          },
+          {
+            "id": "queue",
+            "text": "worker queue lease recovery heartbeat"
+          },
+          {
+            "id": "rag",
+            "text": "knowledge search BM25 retrieval document index"
+          }
+        ],
+        "allowed_ids": [
+          "auth",
+          "queue",
+          "rag"
+        ]
+      },
+      "expected": {
+        "relevant_ids": [
+          "auth"
+        ]
+      },
+      "required_evidence": [
+        "auth"
+      ],
+      "allowed_tools": [
+        "search_knowledge"
+      ],
+      "forbidden_claims": [
+        "No out-of-scope recall",
+        "No invented match"
+      ]
+    },
+    {
+      "id": "knowledge-05",
+      "group": "knowledge",
+      "split": "development",
+      "question": "retrieve lease recovery",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "question": "lease recovery",
+        "documents": [
+          {
+            "id": "auth",
+            "text": "authentication csrf session login password"
+          },
+          {
+            "id": "queue",
+            "text": "worker queue lease recovery heartbeat"
+          },
+          {
+            "id": "rag",
+            "text": "knowledge search BM25 retrieval document index"
+          }
+        ],
+        "allowed_ids": [
+          "auth",
+          "queue",
+          "rag"
+        ]
+      },
+      "expected": {
+        "relevant_ids": [
+          "queue"
+        ]
+      },
+      "required_evidence": [
+        "queue"
+      ],
+      "allowed_tools": [
+        "search_knowledge"
+      ],
+      "forbidden_claims": [
+        "No out-of-scope recall",
+        "No invented match"
+      ]
+    },
+    {
+      "id": "knowledge-06",
+      "group": "knowledge",
+      "split": "development",
+      "question": "retrieve document index",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "question": "document index",
+        "documents": [
+          {
+            "id": "auth",
+            "text": "authentication csrf session login password"
+          },
+          {
+            "id": "queue",
+            "text": "worker queue lease recovery heartbeat"
+          },
+          {
+            "id": "rag",
+            "text": "knowledge search BM25 retrieval document index"
+          }
+        ],
+        "allowed_ids": [
+          "auth",
+          "queue",
+          "rag"
+        ]
+      },
+      "expected": {
+        "relevant_ids": [
+          "rag"
+        ]
+      },
+      "required_evidence": [
+        "rag"
+      ],
+      "allowed_tools": [
+        "search_knowledge"
+      ],
+      "forbidden_claims": [
+        "No out-of-scope recall",
+        "No invented match"
+      ]
+    },
+    {
+      "id": "knowledge-07",
+      "group": "knowledge",
+      "split": "regression",
+      "question": "retrieve csrf",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "question": "csrf",
+        "documents": [
+          {
+            "id": "auth",
+            "text": "authentication csrf session login password"
+          },
+          {
+            "id": "queue",
+            "text": "worker queue lease recovery heartbeat"
+          },
+          {
+            "id": "rag",
+            "text": "knowledge search BM25 retrieval document index"
+          }
+        ],
+        "allowed_ids": [
+          "queue",
+          "rag"
+        ]
+      },
+      "expected": {
+        "relevant_ids": []
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "search_knowledge"
+      ],
+      "forbidden_claims": [
+        "No out-of-scope recall",
+        "No invented match"
+      ]
+    },
+    {
+      "id": "knowledge-08",
+      "group": "knowledge",
+      "split": "development",
+      "question": "retrieve nonexistentword",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "question": "nonexistentword",
+        "documents": [
+          {
+            "id": "auth",
+            "text": "authentication csrf session login password"
+          },
+          {
+            "id": "queue",
+            "text": "worker queue lease recovery heartbeat"
+          },
+          {
+            "id": "rag",
+            "text": "knowledge search BM25 retrieval document index"
+          }
+        ],
+        "allowed_ids": [
+          "auth",
+          "queue",
+          "rag"
+        ]
+      },
+      "expected": {
+        "relevant_ids": []
+      },
+      "required_evidence": [],
+      "allowed_tools": [
+        "search_knowledge"
+      ],
+      "forbidden_claims": [
+        "No out-of-scope recall",
+        "No invented match"
+      ]
+    },
+    {
+      "id": "workflow-01",
+      "group": "workflow",
+      "split": "development",
+      "question": "bounded plan 1",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "pr_number": 1
+      },
+      "expected": {
+        "valid": true
+      },
+      "required_evidence": [],
+      "allowed_tools": [],
+      "forbidden_claims": [
+        "No cycle",
+        "No unknown agent or external write"
+      ]
+    },
+    {
+      "id": "workflow-02",
+      "group": "workflow",
+      "split": "regression",
+      "question": "bounded plan 2",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "pr_number": 0
+      },
+      "expected": {
+        "valid": false
+      },
+      "required_evidence": [],
+      "allowed_tools": [],
+      "forbidden_claims": [
+        "No cycle",
+        "No unknown agent or external write"
+      ]
+    },
+    {
+      "id": "workflow-03",
+      "group": "workflow",
+      "split": "development",
+      "question": "bounded plan 3",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "pr_number": 1,
+        "ci_run_id": 2
+      },
+      "expected": {
+        "valid": false
+      },
+      "required_evidence": [],
+      "allowed_tools": [],
+      "forbidden_claims": [
+        "No cycle",
+        "No unknown agent or external write"
+      ]
+    },
+    {
+      "id": "workflow-04",
+      "group": "workflow",
+      "split": "development",
+      "question": "bounded plan 4",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "pr_number": 1,
+        "ci_run_id": 2,
+        "attempt": 1
+      },
+      "expected": {
+        "valid": true
+      },
+      "required_evidence": [],
+      "allowed_tools": [],
+      "forbidden_claims": [
+        "No cycle",
+        "No unknown agent or external write"
+      ]
+    },
+    {
+      "id": "workflow-05",
+      "group": "workflow",
+      "split": "regression",
+      "question": "bounded plan 5",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "pr_number": 1,
+        "tasks": [
+          {
+            "key": "a",
+            "agent": "knowledge_qa",
+            "depends_on": [
+              "a"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "valid": false
+      },
+      "required_evidence": [],
+      "allowed_tools": [],
+      "forbidden_claims": [
+        "No cycle",
+        "No unknown agent or external write"
+      ]
+    },
+    {
+      "id": "workflow-06",
+      "group": "workflow",
+      "split": "development",
+      "question": "bounded plan 6",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "pr_number": 1,
+        "tasks": [
+          {
+            "key": "a",
+            "agent": "shell"
+          }
+        ]
+      },
+      "expected": {
+        "valid": false
+      },
+      "required_evidence": [],
+      "allowed_tools": [],
+      "forbidden_claims": [
+        "No cycle",
+        "No unknown agent or external write"
+      ]
+    },
+    {
+      "id": "workflow-07",
+      "group": "workflow",
+      "split": "development",
+      "question": "bounded plan 7",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "pr_number": 1,
+        "tasks": [
+          {
+            "key": "a",
+            "agent": "knowledge_qa"
+          },
+          {
+            "key": "a",
+            "agent": "knowledge_qa"
+          }
+        ]
+      },
+      "expected": {
+        "valid": false
+      },
+      "required_evidence": [],
+      "allowed_tools": [],
+      "forbidden_claims": [
+        "No cycle",
+        "No unknown agent or external write"
+      ]
+    },
+    {
+      "id": "workflow-08",
+      "group": "workflow",
+      "split": "regression",
+      "question": "bounded plan 8",
+      "input_scope": "synthetic repository fixture only",
+      "input": {
+        "pr_number": 1,
+        "tasks": [
+          {
+            "key": "a",
+            "agent": "knowledge_qa"
+          },
+          {
+            "key": "b",
+            "agent": "knowledge_qa",
+            "depends_on": [
+              "a"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "valid": true
+      },
+      "required_evidence": [],
+      "allowed_tools": [],
+      "forbidden_claims": [
+        "No cycle",
+        "No unknown agent or external write"
+      ]
+    }
+  ]
+}

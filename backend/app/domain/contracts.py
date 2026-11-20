@@ -96,6 +96,7 @@ class NextAction(Contract):
 
 
 class AnalysisResult(Contract):
+    details: dict = Field(default_factory=dict)
     schema_version: Literal["1.0"] = "1.0"
     kind: Literal[
         "repo_health",

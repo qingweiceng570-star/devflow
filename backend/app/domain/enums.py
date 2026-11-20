@@ -41,11 +41,18 @@ class JobKind(StrEnum):
     SYNC = "sync"
     ANALYZE = "analyze"
     INDEX = "index"
+    IMPORT_DOCS = "import_docs"
+    ACTION = "action"
 
 
 class RunKind(StrEnum):
+    REPO_HEALTH = "repo_health"
     PR_REVIEW = "pr_review"
     KNOWLEDGE_QA = "knowledge_qa"
+    ISSUE_TRIAGE = "issue_triage"
+    CI_DEBUG = "ci_debug"
+    RELEASE_CHECK = "release_check"
+    WEEKLY_REPORT = "weekly_report"
 
 
 class RunStatus(StrEnum):

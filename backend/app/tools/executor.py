@@ -20,7 +20,7 @@ from app.core.config import Settings
 from app.core.errors import DomainError
 from app.domain.contracts import Contract, ToolError, ToolMeta, ToolResult
 
-TOOLSET_VERSION = "m2.1"
+TOOLSET_VERSION = "m7.0"
 
 
 class EvidenceSink(Protocol):
@@ -134,6 +134,10 @@ class ToolExecutor:
         return list(self._specs)
 
     async def execute(self, name: str, raw_arguments: str) -> ToolResult:
+        count = self.deps.scratch.get("executor_calls", 0)
+        if count >= self.deps.settings.agent_max_tool_calls:
+            return error_result("TOOL_LIMIT", "工具调用总数已到上限", source="executor")
+        self.deps.scratch["executor_calls"] = count + 1
         spec = self._specs.get(name)
         if spec is None:
             return error_result("UNKNOWN_TOOL", "工具未注册", source="executor")
@@ -180,4 +184,4 @@ def db_freshness(observed_at: datetime | None, settings: Settings) -> tuple[str,
 
 
 def compact_json_bytes(value: Any) -> int:
-    return len(json.dumps(value, ensure_ascii=False, default=str))
+    return len(json.dumps(value, ensure_ascii=False, default=str).encode("utf-8"))

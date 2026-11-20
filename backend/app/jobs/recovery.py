@@ -19,6 +19,15 @@ log = logging.getLogger("devflow.recovery")
 
 
 def _update_entity(db, job: Job, *, failed: bool, now: datetime) -> None:
+    if job.kind == JobKind.ACTION:
+        from app.persistence.models import ActionDraft, ActionExecution
+        from app.services.memory_service import audit
+        execution = db.get(ActionExecution, job.entity_id)
+        if execution and execution.state in {"queued", "executing"}:
+            draft = db.get(ActionDraft, execution.draft_id)
+            execution.state = draft.state = "unknown" if execution.state == "executing" else "failed"
+            audit(db, draft.repo_id, None, draft.id, "action.interrupted", state=draft.state)
+        return
     if job.kind == JobKind.SYNC:
         run = db.get(SyncRun, job.entity_id)
         if run is None:
@@ -37,7 +46,14 @@ def _update_entity(db, job: Job, *, failed: bool, now: datetime) -> None:
         if run is None or run.status in (RunStatus.COMPLETED, RunStatus.FAILED,
                                          RunStatus.CANCELLED, RunStatus.TIMED_OUT):
             return
+        from app.agents.budget import settle_interrupted
         from app.services.run_service import finalize_run
+        settle_interrupted(db, run.id)
+        if run.kind == "release_check" and not failed:
+            run.status = RunStatus.RECOVERING
+            from app.services.run_service import emit
+            emit(db, run, "run.recovering", {"reason": "lease_expired", "completed_nodes_reused": True})
+            return
 
         marker = {"code": "WORKER_INTERRUPTED", "message": "执行进程中断"}
         finalize_run(
@@ -65,7 +81,8 @@ def recover_expired(db_factory, settings) -> list[dict]:
         for job in jobs:
             # Interrupted syncs are resumed from their committed watermarks;
             # interrupted analyses are not replayed (no partial-run resume yet).
-            retryable = job.kind == JobKind.SYNC
+            entity = db.get(Run, job.entity_id) if job.kind == JobKind.ANALYZE else None
+            retryable = job.kind in {JobKind.SYNC, JobKind.IMPORT_DOCS} or bool(entity and entity.kind == "release_check")
             decision = decide_retry(
                 attempt=job.attempt,
                 max_attempts=job.max_attempts,

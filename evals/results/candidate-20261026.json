@@ -1,0 +1,119 @@
+{
+  "mode": "real_case_offline_review",
+  "dataset_version": "2.0",
+  "sample_count": 4,
+  "repository_count": 2,
+  "repositories": [
+    "psf/requests",
+    "simonw/ttok"
+  ],
+  "split": "development",
+  "reviewer_type": "unassigned",
+  "human_review_status": "pending",
+  "model_requests": 0,
+  "findings": 14,
+  "adjudicated_findings": 0,
+  "uncertain_findings": 0,
+  "pending_findings": 14,
+  "pending_citations": 14,
+  "review_complete": false,
+  "provisional_factual_precision": null,
+  "provisional_false_discovery_rate": null,
+  "fully_supported_citation_rate": null,
+  "reference_verdict_accuracy": null,
+  "median_duration_seconds": 8.367,
+  "total_recorded_tokens": 34455,
+  "recall": null,
+  "recall_note": "No independent exhaustive defect gold set; recall is not measurable yet",
+  "generalization_claim": false,
+  "cases": [
+    {
+      "case": "issue-25",
+      "kind": "issue_triage",
+      "repository": "simonw/ttok",
+      "findings": 4,
+      "truth": {
+        "supported": 0,
+        "refuted": 0,
+        "uncertain": 0,
+        "pending": 4
+      },
+      "factual_precision": null,
+      "false_discovery_rate": null,
+      "fully_supported_citations": 0,
+      "citation_integrity": 1.0,
+      "pending_citations": 4,
+      "verdict_correct": null,
+      "duration_seconds": 11.328,
+      "total_tokens": 15288,
+      "usage_estimated": false
+    },
+    {
+      "case": "ci-37859163438",
+      "kind": "ci_debug",
+      "repository": "simonw/ttok",
+      "findings": 4,
+      "truth": {
+        "supported": 0,
+        "refuted": 0,
+        "uncertain": 0,
+        "pending": 4
+      },
+      "factual_precision": null,
+      "false_discovery_rate": null,
+      "fully_supported_citations": 0,
+      "citation_integrity": 1.0,
+      "pending_citations": 4,
+      "verdict_correct": null,
+      "duration_seconds": 8.922,
+      "total_tokens": 5570,
+      "usage_estimated": false
+    },
+    {
+      "case": "pr-16",
+      "kind": "pr_review",
+      "repository": "simonw/ttok",
+      "findings": 2,
+      "truth": {
+        "supported": 0,
+        "refuted": 0,
+        "uncertain": 0,
+        "pending": 2
+      },
+      "factual_precision": null,
+      "false_discovery_rate": null,
+      "fully_supported_citations": 0,
+      "citation_integrity": 1.0,
+      "pending_citations": 2,
+      "verdict_correct": null,
+      "duration_seconds": 6.86,
+      "total_tokens": 6595,
+      "usage_estimated": false
+    },
+    {
+      "case": "psf-requests-pr-6655",
+      "kind": "pr_review",
+      "repository": "psf/requests",
+      "findings": 4,
+      "truth": {
+        "supported": 0,
+        "refuted": 0,
+        "uncertain": 0,
+        "pending": 4
+      },
+      "factual_precision": null,
+      "false_discovery_rate": null,
+      "fully_supported_citations": 0,
+      "citation_integrity": 1.0,
+      "pending_citations": 4,
+      "verdict_correct": null,
+      "duration_seconds": 7.812,
+      "total_tokens": 7002,
+      "usage_estimated": false
+    }
+  ],
+  "gate_failures": [],
+  "dataset_sha256": "cf21d3813ded098a9a3d52d5b4c20e44456e3b78cd7074a5fdbc772b695d206d",
+  "reference_review_sha256": "f7378170a1bb0498fc5c425943598a0cdb93fa207cd8e17079b18f2b7966b021",
+  "scorer_sha256": "ff0b33da19460ae1ed530ef2f4f41cbc5834aff9e614a265e3c612e712ae8c33"
+}

@@ -81,4 +81,4 @@ def test_required_checks_status():
     )
     assert configured and passed is True  # latest attempt wins
     configured, passed, detail = required_checks_status(["deploy"], [])
-    assert configured and passed is False and any("无匹配运行" in item for item in detail)
+    assert configured and passed is None and any("无匹配运行" in item for item in detail)

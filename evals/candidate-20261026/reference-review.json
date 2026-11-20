@@ -1,0 +1,162 @@
+{
+  "reviewer_type": "unassigned",
+  "human_review_status": "pending",
+  "split": "development",
+  "cases": {
+    "issue-25": {
+      "output_sha256": "8d51bb2725884aefb5f0f53aa2044afc0bdfc7c2459f38e8f94daca4303f1b6c",
+      "expected_verdict": null,
+      "claims": [
+        {
+          "finding": 0,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "b58bf04e-e709-463e-82cb-18bd32ad2ee4"
+          ]
+        },
+        {
+          "finding": 1,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "b58bf04e-e709-463e-82cb-18bd32ad2ee4"
+          ]
+        },
+        {
+          "finding": 2,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "914c7543-898b-4d2c-91c3-39e8160d7c37",
+            "b58bf04e-e709-463e-82cb-18bd32ad2ee4"
+          ]
+        },
+        {
+          "finding": 3,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "334d6606-de00-442b-a426-6a13d8ef2dc5",
+            "b58bf04e-e709-463e-82cb-18bd32ad2ee4"
+          ]
+        }
+      ]
+    },
+    "ci-37859163438": {
+      "output_sha256": "8a5009ba7cc4bca03a99c084a0e574d7d200e81b74e58e7a3def20b57fe3d712",
+      "expected_verdict": null,
+      "claims": [
+        {
+          "finding": 0,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "2496f93c-b894-493e-9218-4462452894e1"
+          ]
+        },
+        {
+          "finding": 1,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "2496f93c-b894-493e-9218-4462452894e1"
+          ]
+        },
+        {
+          "finding": 2,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "2496f93c-b894-493e-9218-4462452894e1"
+          ]
+        },
+        {
+          "finding": 3,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "2496f93c-b894-493e-9218-4462452894e1"
+          ]
+        }
+      ]
+    },
+    "pr-16": {
+      "output_sha256": "d4fd017802f01ede3adb22cb98401ab5280e5863eb5a3247a2483873558f3820",
+      "expected_verdict": null,
+      "claims": [
+        {
+          "finding": 0,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "0a354a93-03fc-4f42-b336-c2e764fe9413",
+            "402c7ae3-c2f0-4476-b509-76804b5a0c84"
+          ]
+        },
+        {
+          "finding": 1,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "f21cf2a8-fbf6-4e06-9d06-aee9882870cf",
+            "0a354a93-03fc-4f42-b336-c2e764fe9413"
+          ]
+        }
+      ]
+    },
+    "psf-requests-pr-6655": {
+      "output_sha256": "13409225abd73a3ad89c709fdfc314ff755f3302c17ef83ad63858bfb9bb2e38",
+      "expected_verdict": null,
+      "claims": [
+        {
+          "finding": 0,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "9a93a369-55b0-5974-a911-7e74ab12a0a4",
+            "2f339132-0d40-5ab6-a85f-8ecb120dc97e"
+          ]
+        },
+        {
+          "finding": 1,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "9a93a369-55b0-5974-a911-7e74ab12a0a4"
+          ]
+        },
+        {
+          "finding": 2,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "9a93a369-55b0-5974-a911-7e74ab12a0a4"
+          ]
+        },
+        {
+          "finding": 3,
+          "truth": "pending",
+          "citation_support": "pending",
+          "reason": "",
+          "cited_evidence_ids": [
+            "b9c70e66-1747-5791-8b43-df1bd80935a4"
+          ]
+        }
+      ]
+    }
+  }
+}

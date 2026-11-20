@@ -1,0 +1,35 @@
+import {chromium} from "@playwright/test";
+import {existsSync,readFileSync,mkdirSync} from "node:fs";
+import {resolve} from "node:path";
+const label=process.argv[2]||"after";
+const directory=resolve("../var/ui-refinement",label);
+mkdirSync(directory,{recursive:true});
+const executablePath=[process.env.PLAYWRIGHT_EXECUTABLE_PATH,"C:/Program Files/Google/Chrome/Application/chrome.exe","C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"].find(p=>p&&existsSync(p));
+const browser=await chromium.launch({headless:true,executablePath});
+try {
+  const page=await browser.newPage({viewport:{width:1440,height:1000},deviceScaleFactor:1});
+  const errors=[];page.on("pageerror",e=>errors.push(e.message));
+  await page.goto("http://localhost:3100/login");
+  await page.screenshot({path:resolve(directory,"login-desktop.png"),fullPage:true});
+  const credentials=JSON.parse(readFileSync(resolve("../var/initial-admin.json"),"utf8").replace(/^\uFEFF/,""));
+  await page.getByLabel("账户",{exact:true}).fill(credentials.username);
+  await page.getByLabel("密码",{exact:true}).fill(credentials.password);
+  await page.getByRole("button",{name:/进入工作空间/}).click();
+  await page.waitForURL("http://localhost:3100/");
+  await page.getByRole("heading",{level:1}).waitFor();
+  await page.screenshot({path:resolve(directory,"home-desktop.png"),fullPage:true});
+  await page.goto("http://localhost:3100/repos");
+  await page.getByRole("heading",{level:1}).waitFor();
+  await page.screenshot({path:resolve(directory,"repos-desktop.png"),fullPage:true});
+  await page.getByRole("link",{name:"进入",exact:true}).first().click();
+  await page.locator("aside").getByRole("link",{name:/工作流与审批/}).click();
+  await page.getByRole("heading",{name:"发布检查",exact:true}).waitFor();
+  await page.screenshot({path:resolve(directory,"collaboration-desktop.png"),fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  await page.screenshot({path:resolve(directory,"collaboration-mobile.png"),fullPage:true});
+  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
+  await page.goto("http://localhost:3100/login");
+  await page.screenshot({path:resolve(directory,"login-mobile.png"),fullPage:true});
+  if(errors.length||overflow)throw new Error(JSON.stringify({errors,overflow}));
+  console.log(JSON.stringify({screenshots:directory,errors:0,mobileOverflow:false}));
+} finally {await browser.close();}

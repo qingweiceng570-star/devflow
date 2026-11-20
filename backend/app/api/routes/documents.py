@@ -131,7 +131,7 @@ def delete_document(
     document = db.get(Document, document_id)
     if document is None:
         raise DomainError("RESOURCE_NOT_FOUND", "资源不存在", 404)
-    require_repo(db, user, document.repo_id)
+    require_repo(db, user, document.repo_id, minimum_role="analyst")
     document = knowledge_service.delete_document(
         db, request.app.state.settings, document, expected_version=body.expected_version
     )

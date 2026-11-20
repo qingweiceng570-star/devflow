@@ -1,6 +1,6 @@
 """Document parsing for the knowledge base (README 13.1).
 
-First version accepts UTF-8 Markdown and plain text only; anything else is
+Accepts UTF-8 Markdown, MDX, RST and plain text; anything else is
 rejected explicitly instead of being stored as an empty husk.
 """
 
@@ -12,7 +12,7 @@ from app.core.config import Settings
 from app.core.errors import DomainError
 
 PARSER_VERSION = "plain-md.v1"
-SUPPORTED_EXTENSIONS = {".md", ".markdown", ".txt"}
+SUPPORTED_EXTENSIONS = {".md", ".markdown", ".mdx", ".rst", ".txt"}
 
 
 @dataclass
@@ -32,7 +32,7 @@ def parse_document(filename: str, content: bytes, settings: Settings) -> ParsedD
         )
     extension = Path(filename).suffix.lower()
     if extension not in SUPPORTED_EXTENSIONS:
-        raise DomainError("UNSUPPORTED_FORMAT", "仅支持 UTF-8 Markdown/纯文本（.md/.markdown/.txt）", 415)
+        raise DomainError("UNSUPPORTED_FORMAT", "仅支持 UTF-8 文本（.md/.markdown/.mdx/.rst/.txt）", 415)
     if b"\x00" in content[:8000]:
         raise DomainError("UNSUPPORTED_FORMAT", "二进制内容不支持", 415)
     try:

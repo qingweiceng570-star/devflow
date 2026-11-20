@@ -188,15 +188,20 @@ async def get_repo_summary(deps: ToolDeps, args: RepoSummaryInput) -> ToolResult
             ),
         }
         freshness, as_of = _sync_freshness(db, repo_id, deps.settings)
+        ci_cursor = db.scalar(select(SyncCursor).where(SyncCursor.repo_id == repo_id, SyncCursor.resource == "ci"))
+        ci_coverage = ci_cursor.coverage if ci_cursor else {"status": "unknown", "reason": "not_synced"}
+    facts = {"counts": counts, "as_of": as_of, "window_days": args.window_days, "only_synced_scope": True, "ci_coverage": ci_coverage}
+    evidence_id = deps.evidence(source_type="repo_summary", content=json.dumps(facts, ensure_ascii=False), locator={"window_days": args.window_days, "as_of": as_of})
     return ok_result(
         {
-            "counts": counts,
+            **facts,
             "as_of": as_of,
             "window_days": args.window_days,
             "only_synced_scope": True,
             "note": "计数来自已同步范围内的数据，不代表远端全量",
         },
         source="synchronized_data",
+        evidence_ids=[evidence_id],
         freshness=freshness,
     )
 
@@ -370,6 +375,11 @@ async def get_pr(deps: ToolDeps, args: GetPrInput) -> ToolResult:
 
 
 async def get_ci_runs(deps: ToolDeps, args: GetCiRunsInput) -> ToolResult:
+    if deps.scratch.get("live_ci") and args.pr_number in {None, deps.ctx.pr_number}:
+        live = deps.scratch["live_ci"]
+        return ok_result({"runs": live["runs"], "matched_head_sha": deps.ctx.head_sha, "has_more": live["has_more"]}, source="github_live", evidence_ids=[live["evidence_id"]], status="partial" if live["has_more"] else "ok", freshness="fresh")
+    if deps.scratch.get("ci_lookup_error"):
+        return ok_result({"runs": [], "diagnostic": deps.scratch["ci_lookup_error"]}, source="github_live", status="partial", warnings=[deps.scratch["ci_lookup_error"]["code"]])
     with deps.db_factory() as db:
         if args.pr_number is not None:
             pr = db.scalar(

@@ -39,7 +39,7 @@ def submit_run(
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.owner_id != user.id:
         raise DomainError("RESOURCE_NOT_FOUND", "资源不存在", 404)
-    repo = require_repo(db, user, conversation.repo_id)[0]
+    repo = require_repo(db, user, conversation.repo_id, minimum_role="analyst")[0]
     settings = request.app.state.settings
 
     def create() -> dict:
@@ -50,7 +50,7 @@ def submit_run(
             repo=repo,
             message_text=body.message,
             kind=body.kind,
-            target=(body.target.model_dump() if body.target else {}),
+            target=(body.target.model_dump(mode="json") if body.target else {}),
         )
         view = run_view(run, detail=False)
         return {
@@ -156,6 +156,7 @@ def cancel_run(
 ):
     user, _ = identity
     run = _scoped_run(db, user, run_id)
+    require_repo(db, user, run.repo_id, minimum_role="analyst")
     run = run_service.request_cancel(db, run)
     return envelope(run_view(run, detail=False))
 

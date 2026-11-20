@@ -6,10 +6,21 @@ from app.api.deps import get_db, mutation_identity, repo_scope
 from app.core.errors import DomainError
 from app.rag.retriever import retrieve
 from app.schemas.requests import KnowledgeSearchRequest, ReindexRequest
-from app.schemas.responses import envelope
+from app.schemas.responses import envelope, job_view
 from app.services import knowledge_service
 
 router = APIRouter()
+
+
+@router.post("/repos/{repo_id}/knowledge/import", status_code=202)
+def import_repository_documents(
+    repo_scope_pair=Depends(repo_scope),
+    identity=Depends(mutation_identity),
+    db=Depends(get_db),
+):
+    repo, _ = repo_scope_pair
+    job = knowledge_service.request_repository_import(db, repo)
+    return envelope({"accepted": True, "job": job_view(job)})
 
 
 def _parse_bound(value: str | None, label: str) -> datetime | None:

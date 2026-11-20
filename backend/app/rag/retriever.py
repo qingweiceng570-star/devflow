@@ -27,6 +27,8 @@ from app.persistence.models import (
 from app.rag.bm25_store import Bm25Index
 from app.rag.chunker import ESTIMATOR_VERSION
 from app.rag.embeddings import EmbeddingClient
+from app.rag.index_cache import bm25_cache
+from app.rag.reranker import RerankClient, RerankUnavailable
 from app.rag.tokenizer import TOKENIZER_VERSION
 from app.rag.vector_store import MilvusVectorStore, VectorUnavailable
 
@@ -91,7 +93,7 @@ def _rrf_fuse(channel_rankings: dict[str, list[str]]) -> dict[str, float]:
 
 
 def _load_bm25(settings: Settings, repo_id: UUID, generation: IndexGeneration) -> Bm25Index:
-    return Bm25Index.load(index_dir(settings, repo_id, generation.id) / "bm25.json")
+    return bm25_cache.load(index_dir(settings, repo_id, generation.id) / "bm25.json")
 
 
 def retrieve(
@@ -106,6 +108,7 @@ def retrieve(
     bm25_loader=None,
     vector_store_factory=None,
     embedding_factory=None,
+    rerank_factory=None,
 ) -> tuple[list[RetrievedChunk], RetrievalTrace]:
     trace = RetrievalTrace(query=query)
     generation = db.scalar(
@@ -167,8 +170,11 @@ def retrieve(
             trace.degraded.append("vector_unavailable")
         trace.channels["vector"] = {"enabled": False, "reason": vector_reason}
 
-    if "bm25_unavailable" in trace.degraded and "vector_unavailable" in trace.degraded:
-        raise DomainError("RETRIEVAL_UNAVAILABLE", "检索服务当前不可用", 503, retryable=True)
+    if not any(channel["enabled"] for channel in trace.channels.values()):
+        raise DomainError(
+            "RETRIEVAL_UNAVAILABLE", "检索服务当前不可用，请在知识库检查索引状态并重建索引", 503,
+            retryable=True,
+        )
 
     # --- RRF fusion --------------------------------------------------------
     rankings = {}
@@ -213,9 +219,41 @@ def retrieve(
         selected_ids.extend(cid for cid in extra_candidates if cid in extra_allowed)
 
     limit = final_k or settings.rag_final_k
-    packed = _pack(db, selected_ids[:limit], fused_scores)
+    packed = _pack(db, selected_ids[: max(limit, settings.rag_rerank_k)], fused_scores)
+    if not packed:
+        packed = []
+    elif settings.rerank_configured:
+        factory = rerank_factory or (lambda s: RerankClient(s))
+        try:
+            pairs = factory(settings).rerank(
+                query, [chunk.text for chunk in packed], top_n=limit
+            )
+            ordered: list[RetrievedChunk] = []
+            seen: set[int] = set()
+            for index, score in sorted(pairs, key=lambda item: (-item[1], item[0])):
+                if 0 <= index < len(packed) and index not in seen:
+                    seen.add(index)
+                    packed[index].scores["rerank"] = round(score, 6)
+                    ordered.append(packed[index])
+            if not ordered:
+                raise RerankUnavailable("重排没有可用结果")
+            packed = ordered[:limit]
+            trace.reranked = True
+            trace.channels["rerank"] = {"enabled": True, "count": len(ordered)}
+        except Exception:  # noqa: BLE001 - rerank is a quality upgrade, never a dependency
+            log.warning("rerank channel failed; falling back to RRF order")
+            trace.degraded.append("rerank_unavailable")
+            trace.channels["rerank"] = {"enabled": False, "reason": "unavailable"}
+            packed = packed[:limit]
+    else:
+        trace.channels["rerank"] = {"enabled": False, "reason": "not_configured"}
+        packed = packed[:limit]
     trace.selected = [
-        {"chunk_id": str(chunk.chunk_id), "rrf": round(fused_scores[str(chunk.chunk_id)], 6)}
+        {
+            "chunk_id": str(chunk.chunk_id),
+            "rrf": round(fused_scores[str(chunk.chunk_id)], 6),
+            **({"rerank": chunk.scores["rerank"]} if "rerank" in chunk.scores else {}),
+        }
         for chunk in packed
         if str(chunk.chunk_id) in fused_scores
     ]
@@ -256,6 +294,7 @@ def _db_check_back(
             Chunk.repo_id == repo_id,
             Chunk.id.in_([UUID(chunk_id) for chunk_id in members]),
             Document.state == "active",
+            Document.current_version_id == Chunk.document_version_id,
         )
     )
     if source_types:

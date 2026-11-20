@@ -8,6 +8,7 @@ common.
 """
 
 import asyncio
+import json
 import logging
 from datetime import UTC, datetime
 from uuid import UUID
@@ -69,22 +70,64 @@ from app.workspace.manager import WorkspaceManager
 log = logging.getLogger("devflow.analyze")
 
 PR_REVIEW_TOOLS = [
-    ToolSpec("get_repo_summary", "读取仓库健康概要（已同步范围），用于整体背景。", RepoSummaryInput, get_repo_summary),
+    ToolSpec(
+        "get_repo_summary",
+        "读取仓库健康概要（已同步范围），用于整体背景。",
+        RepoSummaryInput,
+        get_repo_summary,
+    ),
     ToolSpec("list_issues", "分页列出 Issue 摘要。", ListIssuesInput, list_issues),
     ToolSpec("get_issue", "读取单个 Issue 的描述与状态并生成证据。", GetIssueInput, get_issue),
     ToolSpec("list_pull_requests", "分页列出 PR 摘要。", ListPullsInput, list_pull_requests),
     ToolSpec("get_pr", "读取单个 PR 的元数据并生成证据。", GetPrInput, get_pr),
-    ToolSpec("get_pr_diff", "分页读取目标 PR 已准备的差异补丁（含每文件证据 ID 与覆盖度）。", GetPrDiffInput, get_pr_diff),
-    ToolSpec("get_ci_runs", "读取与目标 head 匹配的 CI 运行摘要与失败任务，并生成证据。", GetCiRunsInput, get_ci_runs),
-    ToolSpec("read_file", "读取目标 head 版本的仓库文件（指定行范围）并生成代码证据。", ReadFileInput, read_file_tool),
-    ToolSpec("search_code", "在目标 head 版本中做固定字符串搜索并生成证据。", SearchCodeInput, search_code_tool),
+    ToolSpec(
+        "get_pr_diff",
+        "分页读取目标 PR 已准备的差异补丁（含每文件证据 ID 与覆盖度）。",
+        GetPrDiffInput,
+        get_pr_diff,
+    ),
+    ToolSpec(
+        "get_ci_runs",
+        "读取与目标 head 匹配的 CI 运行摘要与失败任务，并生成证据。",
+        GetCiRunsInput,
+        get_ci_runs,
+    ),
+    ToolSpec(
+        "read_file",
+        "读取目标 head 版本的仓库文件（指定行范围）并生成代码证据。",
+        ReadFileInput,
+        read_file_tool,
+    ),
+    ToolSpec(
+        "search_code",
+        "在目标 head 版本中做固定字符串搜索并生成证据。",
+        SearchCodeInput,
+        search_code_tool,
+    ),
 ]
 
 KNOWLEDGE_QA_TOOLS = [
-    ToolSpec("search_knowledge", "在项目知识库中做混合检索（含引用、分数与降级标记）。", SearchKnowledgeInput, search_knowledge),
-    ToolSpec("read_file", "读取目标 head 版本的仓库文件（指定行范围）并生成代码证据。", ReadFileInput, read_file_tool),
-    ToolSpec("search_code", "在目标 head 版本中做固定字符串搜索并生成证据。", SearchCodeInput, search_code_tool),
-    ToolSpec("get_repo_summary", "读取仓库健康概要（已同步范围）。", RepoSummaryInput, get_repo_summary),
+    ToolSpec(
+        "search_knowledge",
+        "在项目知识库中做混合检索（含引用、分数与降级标记）。",
+        SearchKnowledgeInput,
+        search_knowledge,
+    ),
+    ToolSpec(
+        "read_file",
+        "读取目标 head 版本的仓库文件（指定行范围）并生成代码证据。",
+        ReadFileInput,
+        read_file_tool,
+    ),
+    ToolSpec(
+        "search_code",
+        "在目标 head 版本中做固定字符串搜索并生成证据。",
+        SearchCodeInput,
+        search_code_tool,
+    ),
+    ToolSpec(
+        "get_repo_summary", "读取仓库健康概要（已同步范围）。", RepoSummaryInput, get_repo_summary
+    ),
     ToolSpec("get_issue", "读取单个 Issue 的描述与状态并生成证据。", GetIssueInput, get_issue),
     ToolSpec("get_pr", "读取单个 PR 的元数据并生成证据。", GetPrInput, get_pr),
     ToolSpec("get_ci_runs", "读取与目标 head 匹配的 CI 运行摘要。", GetCiRunsInput, get_ci_runs),
@@ -111,17 +154,41 @@ def handle_analyze(
             return {"status": "missing"}
         if run.status in run_service.TERMINAL_RUN_STATUSES:
             return {"status": run.status}
+        if run.kind == "release_check":
+            from app.workflows.release import execute_release
+
+            return execute_release(
+                db_factory,
+                settings,
+                job,
+                worker_id,
+                client_factory=client_factory,
+                model_factory=model_factory,
+                workspace_factory=workspace_factory,
+                vector_store_factory=vector_store_factory,
+                embedding_factory=embedding_factory,
+            )
+        if run.kind == "weekly_report":
+            from app.workflows.weekly import execute_weekly
+
+            return execute_weekly(db_factory, settings, job, worker_id)
         repo = db.get(Repository, run.repo_id)
-        conversation = db.get(Conversation, run.conversation_id) if run.conversation_id else None
+        parent = db.get(Run, run.parent_run_id) if run.parent_run_id else None
+        conversation_id = run.conversation_id or (parent.conversation_id if parent else None)
+        conversation = db.get(Conversation, conversation_id) if conversation_id else None
         if repo is None or conversation is None:
             run_service.finalize_run(
-                db, run, status=RunStatus.FAILED,
+                db,
+                run,
+                status=RunStatus.FAILED,
                 error={"code": "RUN_CONTEXT_MISSING", "message": "运行上下文缺失"},
             )
             return {"status": "failed"}
         if repo.state != "active":
             run_service.finalize_run(
-                db, run, status=RunStatus.FAILED,
+                db,
+                run,
+                status=RunStatus.FAILED,
                 error={"code": "REPO_DISABLED", "message": "仓库已禁用"},
             )
             return {"status": "failed"}
@@ -134,11 +201,17 @@ def handle_analyze(
             return {"status": "state_changed"}
         if run.kind == RunKind.PR_REVIEW.value:
             flow = _execute_pr_review
-        elif run.kind == RunKind.KNOWLEDGE_QA.value:
+        elif run.kind in {RunKind.KNOWLEDGE_QA.value, RunKind.REPO_HEALTH.value}:
             flow = _execute_knowledge_qa
+        elif run.kind in {RunKind.ISSUE_TRIAGE.value, RunKind.CI_DEBUG.value}:
+            from app.jobs.handlers.specialists import execute_specialist
+
+            flow = execute_specialist
         else:
             run_service.finalize_run(
-                db, run, status=RunStatus.FAILED,
+                db,
+                run,
+                status=RunStatus.FAILED,
                 error={"code": "UNKNOWN_RUN_KIND", "message": f"未知分析类型 {run.kind}"},
             )
             return {"status": "failed"}
@@ -165,7 +238,10 @@ def handle_analyze(
             # a terminal state instead of a forever-"running" record.
             with db_factory() as guard_db:
                 guard_run = guard_db.get(Run, run.id)
-                if guard_run is not None and guard_run.status not in run_service.TERMINAL_RUN_STATUSES:
+                if (
+                    guard_run is not None
+                    and guard_run.status not in run_service.TERMINAL_RUN_STATUSES
+                ):
                     run_service.finalize_run(
                         guard_db,
                         guard_run,
@@ -175,15 +251,14 @@ def handle_analyze(
             raise
 
 
-def _start_execution(
-    db_factory, settings, *, run_id, job_id, job_epoch, worker_id, client_factory
-):
+def _start_execution(db_factory, settings, *, run_id, job_id, job_epoch, worker_id, client_factory):
     """Load the run context and open the shared execution object."""
     bootstrap_db = db_factory()
     try:
         run = bootstrap_db.get(Run, run_id)
         repo = bootstrap_db.get(Repository, run.repo_id)
-        conversation = bootstrap_db.get(Conversation, run.conversation_id)
+        parent = bootstrap_db.get(Run, run.parent_run_id) if run.parent_run_id else None
+        conversation = bootstrap_db.get(Conversation, run.conversation_id or parent.conversation_id)
         token = resolve_read_token(settings, repo.credential_ref)
         maker = client_factory or create_read_client
         read = GitHubRead(maker(settings, token), repo.full_name)
@@ -225,7 +300,9 @@ async def _run_flow(
     model_maker,
 ):
     """Shared loop invocation with model construction and lease-safety."""
-    executor = execution.make_executor(specs, ctx=ctx, read=read, workspace=workspace, scratch=scratch)
+    executor = execution.make_executor(
+        specs, ctx=ctx, read=read, workspace=workspace, scratch=scratch
+    )
     try:
         model = model_maker(execution.settings)
     except DomainError as error:
@@ -262,7 +339,12 @@ async def _execute_pr_review(
         worker_id=worker_id,
         client_factory=client_factory,
     )
-    db, run, repo, conversation = execution.db, execution.run, execution.repo, execution.conversation
+    db, run, repo, conversation = (
+        execution.db,
+        execution.run,
+        execution.repo,
+        execution.conversation,
+    )
     try:
         pr_number = run.target.get("pr_number")
         # --- refresh target PR live and fix base/head SHA (README 3.2 step 3) ---
@@ -281,6 +363,8 @@ async def _execute_pr_review(
         apply_pull_row(db, repo.id, pr_data)
         db.commit()
         head_sha = pr_data["head_sha"]
+        if run.target.get("expected_head_sha") and run.target["expected_head_sha"] != head_sha:
+            raise DomainError("HEAD_CHANGED", "PR head 已偏离工作流固定版本", 409)
         base_sha = pr_data["base_sha"]
         mergeable = raw_pr.get("mergeable")
         is_draft = bool(pr_data["draft"])
@@ -298,16 +382,57 @@ async def _execute_pr_review(
         # --- prepare the bounded diff scope; every patch becomes evidence ---
         try:
             scope = prepare_diff_scope(
-                settings, read, repo.full_name, pr_number, pr_data["html_url"], head_sha,
+                settings,
+                read,
+                repo.full_name,
+                pr_number,
+                pr_data["html_url"],
+                head_sha,
                 execution.evidence,
             )
         except DomainError as error:
             execution.fail_run(error.code, "无法获取 PR 差异")
             raise
         scratch = {"pr_diff": scope}
+        run.target = {**run.target, "changed_paths": [entry["path"] for entry in scope["files"]]}
+        db.commit()
 
         required_checks = list((repo.config_json or {}).get("required_checks") or [])
         ci_runs = _ci_run_dicts(db, repo.id, head_sha)
+        try:
+            lookup = read.ci_for_head(
+                head_sha, max_pages=min(3, settings.sync_max_pages), check_stop=execution.check_stop
+            )
+            ci_runs = [
+                {
+                    "run_id": item["id"],
+                    "workflow": item.get("name"),
+                    "status": item.get("status"),
+                    "conclusion": item.get("conclusion"),
+                    "attempt": item.get("run_attempt", 1),
+                    "head_sha": head_sha,
+                    "started_at": item.get("run_started_at") or item.get("created_at"),
+                    "html_url": item.get("html_url"),
+                }
+                for item in lookup["items"][:20]
+            ]
+            ci_id = execution.evidence(
+                source_type="ci_runs",
+                content=json.dumps(ci_runs, ensure_ascii=False),
+                locator={
+                    "head_sha": head_sha,
+                    "pages": lookup["pages"],
+                    "has_more": lookup["has_more"] or len(lookup["items"]) > 20,
+                },
+            )
+            scratch["live_ci"] = {
+                "runs": ci_runs,
+                "evidence_id": ci_id,
+                "has_more": lookup["has_more"] or len(lookup["items"]) > 20,
+            }
+        except DomainError as error:
+            scratch["ci_lookup_error"] = {"code": error.code, "message": error.message}
+            ci_runs = []
         checks_configured, checks_passed, checks_detail = required_checks_status(
             required_checks, ci_runs
         )
@@ -370,7 +495,9 @@ async def _execute_pr_review(
             return outcome
 
         # --- post-processing: citations, freshness re-check, verdict policy ---
-        draft, citation_notes = filter_evidence_refs(outcome.parsed, execution.collected_ids)
+        draft, citation_notes = filter_evidence_refs(
+            outcome.parsed, execution.collected_ids, execution.draft_ids
+        )
         limitations = list(draft.limitations) + citation_notes
         if scope["unreviewed"]:
             note = "以下文件未获得补丁或超出预算，未纳入审查：" + ", ".join(
@@ -464,7 +591,12 @@ async def _execute_knowledge_qa(
         worker_id=worker_id,
         client_factory=client_factory,
     )
-    db, run, repo, conversation = execution.db, execution.run, execution.repo, execution.conversation
+    db, run, repo, conversation = (
+        execution.db,
+        execution.run,
+        execution.repo,
+        execution.conversation,
+    )
     try:
         user_message, _history = execution.load_history()
         if user_message is None:
@@ -473,8 +605,8 @@ async def _execute_knowledge_qa(
 
         # Fix the default-branch head for code reads; failure degrades to
         # database/knowledge tools only (the run continues).
-        head_sha = None
-        if repo.default_branch:
+        head_sha = run.target.get("expected_head_sha")
+        if repo.default_branch and not head_sha:
             try:
                 head_sha = read.get_branch_head(repo.default_branch)
             except DomainError:
@@ -488,6 +620,8 @@ async def _execute_knowledge_qa(
                 "chunk_count": active["chunk_count"] if active else 0,
             },
         )
+        if run.kind == "repo_health":
+            system_prompt += "\n你负责仓库健康检查。首先调用 get_repo_summary，再按需检查积压 Issue、PR、CI。数字只能引用数据库返回的统计，未同步或无 CI 权限时显示未知，不能表示全部通过。输出明确统计范围与观察时间。"
         question_messages = build_question_message(user_message.content, index_summary)
         messages, context_info = execution.assemble(
             system_prompt=system_prompt, extra_user_messages=question_messages
@@ -524,7 +658,9 @@ async def _execute_knowledge_qa(
         if isinstance(outcome, dict):
             return outcome
 
-        draft, citation_notes = filter_evidence_refs(outcome.parsed, execution.collected_ids)
+        draft, citation_notes = filter_evidence_refs(
+            outcome.parsed, execution.collected_ids, execution.draft_ids
+        )
         limitations = list(draft.limitations) + citation_notes
         if context_info["history_trimmed"]:
             limitations.append("更早的对话历史因预算被省略")
@@ -533,11 +669,17 @@ async def _execute_knowledge_qa(
 
         has_evidence = bool(execution.collected_ids)
         result = AnalysisResult(
-            kind="knowledge_qa",
+            kind=run.kind,
             summary=draft.summary,
             verdict="not_applicable",
-            coverage="complete" if has_evidence else "unavailable",
-            freshness="fresh" if (active and not index_summary.get("pending_changes")) else "unknown",
+            coverage="partial"
+            if has_evidence and (limitations or draft.missing_evidence or run.kind == "repo_health")
+            else "complete"
+            if has_evidence
+            else "unavailable",
+            freshness="fresh"
+            if (active and not index_summary.get("pending_changes"))
+            else "unknown",
             findings=draft.findings,
             hypotheses=draft.hypotheses,
             missing_evidence=draft.missing_evidence,

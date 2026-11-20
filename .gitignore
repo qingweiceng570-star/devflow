@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 var/
+.pnpm-store/
 backend/.venv/
 backend/.pytest_cache/
 backend/.ruff_cache/

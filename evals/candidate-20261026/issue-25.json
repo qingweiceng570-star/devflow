@@ -1,0 +1,521 @@
+{
+  "id": "issue-25",
+  "repository": "simonw/ttok",
+  "kind": "issue_triage",
+  "target": {
+    "issue_number": 25,
+    "head_sha": "df24f500721ce5f2a75d9ecfbd4fdc58a896c1e0"
+  },
+  "evidence": [
+    {
+      "id": "b58bf04e-e709-463e-82cb-18bd32ad2ee4",
+      "type": "issue",
+      "locator": {
+        "number": 25,
+        "updated_at": "2026-10-09T00:35:28Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:21.768755+00:00",
+      "sha256": "5a71e2b8ff9771c736694bfdf4d95af529eae3257d70317f32cf66fd9f69fadb",
+      "content": "{\"number\": 25, \"title\": \"Default tokenizer should be the GPT-5 one\", \"state\": \"closed\", \"updated_at\": \"2026-10-09T00:35:28Z\", \"html_url\": \"https://github.com/simonw/ttok/issues/25\", \"body\": \"Well this is embarrassing: I shipped 0.4 but this is a breaking change so I'll have to ship 0.5.\\n\\nI'm going to jump to 1.0 for this.\"}"
+    },
+    {
+      "id": "334d6606-de00-442b-a426-6a13d8ef2dc5",
+      "type": "issue",
+      "locator": {
+        "number": 18,
+        "updated_at": "2026-10-08T23:30:50Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.088328+00:00",
+      "sha256": "098cbc2b42ce3c4aeb0fe6fda6c9090c3880251695e5ed8603de742dd53024b7",
+      "content": "{\"number\": 18, \"title\": \"FR: command to list supported models\", \"body\": \"Feature request: add a command that lists the supported models\\r\\n\\r\\nThe tool accepts argument -m but does not seem to have a way to see what model names are valid.\\r\\nThe github page lists the valid model names, but I expect the list of valid names will grow with future versions of ttok.\\r\\n\\r\\nSo a command to list valid models would make it possible to figure out what model names are valid regardless of the version being run.\"}"
+    },
+    {
+      "id": "9f77db00-65df-4cdd-b23a-7d8f83a453bf",
+      "type": "issue",
+      "locator": {
+        "number": 17,
+        "updated_at": "2026-10-08T23:29:43Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.103009+00:00",
+      "sha256": "1fc85f9548145289a544d24ac6ac58cfbb69e61b3be81562c711422905d1abb2",
+      "content": "{\"number\": 17, \"title\": \"Cannot use with files-to-prompt\", \"body\": \"```\\r\\nfiles-to-prompt . -e ts | ttok\\r\\nError: Encountered text corresponding to disallowed special token '<|endoftext|>'.\\r\\nUse --allow-special to allow special tokens\\r\\n```\\r\\n\\r\\nthen\\r\\n\\r\\n```\\r\\nfiles-to-prompt . -e ts | ttok --allow-special\\r\\nError: Cannot use --allow-special without --encode or --tokens\\r\\n```\\r\\n\\r\\nThen with --encode or --tokens I cannot count it. I just want to see how many tokens would it use to query the current directory.\"}"
+    },
+    {
+      "id": "914c7543-898b-4d2c-91c3-39e8160d7c37",
+      "type": "issue",
+      "locator": {
+        "number": 15,
+        "updated_at": "2026-10-08T23:27:45Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.112686+00:00",
+      "sha256": "2dcab632c1362c8b2782be1cd3352bc0e1060006597d7ce3e2b6be0bfc4dee2f",
+      "content": "{\"number\": 15, \"title\": \"Support for tokenizer used by gpt-4o models\", \"body\": \"I noticed that gpt-4o uses (o200k_base) a different tokenizer than gpt-4 (cl100k_base). It looks like this was added https://github.com/openai/tiktoken/commit/9d01e5670ff50eb74cdb96406c7f3d9add0ae2f8#diff-0d973848bd229418209db2c46c86167000845592ca6b98fad215c21c317bc494R10 in tiktoken version [0.7.0](https://github.com/openai/tiktoken/releases/tag/0.7.0)\\r\\n\\r\\nIt would be useful if `ttok` could also be updated to use it\"}"
+    },
+    {
+      "id": "f3985ddb-3b7d-4e34-bb5d-211d7087905b",
+      "type": "issue",
+      "locator": {
+        "number": 23,
+        "updated_at": "2026-10-08T23:27:26Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.122676+00:00",
+      "sha256": "0bcd13095fb7815151bc1fa604982de4280cc632251b15448ab6ce80cbf7ec41",
+      "content": "{\"number\": 23, \"title\": \"BUG: `ttok` command produces duplicate parameter warnings\", \"body\": \"### Description\\nThe `ttok` command produces duplicate parameter warnings when executed via pipe input, indicating the `--tokens` parameter is defined multiple times in the Click CLI configuration.\\n\\n### Steps to Reproduce\\n1. Install ttok via Homebrew: `brew install simonw/llm/ttok`\\n2. Run ttok with piped input:\\n```bash\\n   cat tmp_vault.md | ttok\\n```\\n\\n### Expected Behavior\\nCommand should execute cleanly without warnings and display token count.\\n\\n### Actual Behavior\\nCommand displays two UserWarnings before showing results:\\n```\\n/Users/andy16/.local/share/uv/tools/ttok/lib/python3.12/site-packages/click/core.py:1223: UserWarning: The parameter --tokens is used more than once. Remove its duplicate as parameters should be unique.\\n  parser = self.make_parser(ctx)\\n/Users/andy16/.local/share/uv/tool\"}"
+    },
+    {
+      "id": "3a832279-6be3-4cb9-9ab6-4c17fea4fc22",
+      "type": "issue",
+      "locator": {
+        "number": 20,
+        "updated_at": "2026-10-08T23:26:59Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.131974+00:00",
+      "sha256": "b67ae11df988ba03dc6be4f6a438f88fcfe10d4ff28fa31246912dbf2f6b5ecc",
+      "content": "{\"number\": 20, \"title\": \"UserWarning coming from click library\", \"body\": \"ttok is showing a UserWarning coming from the click library reporting that `--tokens` is used more than once:\\n\\n```sh\\n$ ttok --version\\n/Users/brian/.pyenv/versions/3.13.3/envs/llm-dev-3.13/lib/python3.13/site-packages/click/core.py:1193: UserWarning: The parameter --tokens is used more than once. Remove its duplicate as parameters should be unique.\\n  parser = self.make_parser(ctx)\\n/Users/brian/.pyenv/versions/3.13.3/envs/llm-dev-3.13/lib/python3.13/site-packages/click/core.py:1186: UserWarning: The parameter --tokens is used more than once. Remove its duplicate as parameters should be unique.\\n  self.parse_args(ctx, args)\\nttok, version 0.3\\n```\\n\\nI can see where this started with click 8.2.0 which included adding this warning: https://github.com/pallets/click/issues/2396\\n\\nThe ttok utility stil\"}"
+    },
+    {
+      "id": "d85718de-1096-49da-b4d0-615db20d7201",
+      "type": "issue",
+      "locator": {
+        "number": 11,
+        "updated_at": "2025-06-23T01:08:32Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.142740+00:00",
+      "sha256": "38a4419cb14d37a804f0ec2a88f092e3e85e2bdc3b2d3a3c45b1552d374847f8",
+      "content": "{\"number\": 11, \"title\": \"Does `ttok` need an internet connection?\", \"body\": \"`ttok` either does not work or is very very slow when the internet connection is bad/non-existent. Is this a known design behavior or a bug?\\r\\n\\r\\nRelated:\\r\\n- #10 \"}"
+    },
+    {
+      "id": "7bbb27eb-3c99-455a-adc4-f30489249b0d",
+      "type": "issue",
+      "locator": {
+        "number": 21,
+        "updated_at": "2025-06-05T14:33:36Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.153286+00:00",
+      "sha256": "cec1475b1f01ad3ef49fe6d872c58a7d54c1de2f850d8e195e3b137dd55a871b",
+      "content": "{\"number\": 21, \"title\": \"feature request: send a signal if the message was truncated or not\", \"body\": \"I want to use ttok to truncate input, and inform the user if it was truncated. At the moment, that'd mean I have to call `ttok` twice as far as I can tell - once to count the tokens and a second time to truncate.\\n\\n`ttok` takes about 0.16 seconds to run on my machine even with minimal input, which means that two calls add up to .3 seconds, which is definitely perceptible to the user.\\n\\nYou probably can't alter the return code of `ttok -t` at this point; many users are likely depending on the return code being 0 whether it truncates or not.\\n\\nThe only way I can think of to implement this feature would be with another command-line flag for \\\"truncate and signal\\\", which would return a non-zero status code if it truncated the input - any out of band signalling mechanism I can think of seems like i\"}"
+    },
+    {
+      "id": "5b07d301-6e3d-4f43-9425-9db9a90a9162",
+      "type": "issue",
+      "locator": {
+        "number": 8,
+        "updated_at": "2025-04-10T04:23:02Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.164255+00:00",
+      "sha256": "91003c23b34af0579f62f91d1380f792c301a2f0f9f2079c5865177e6d2df03c",
+      "content": "{\"number\": 8, \"title\": \"Ability to count tokens for models other than OpenAI\", \"body\": \"Had a great tip [on Discord](https://discord.com/channels/823971286308356157/1128504153841336370/1150151127183134720) about `tokenziers` - which says: https://huggingface.co/docs/tokenizers/python/latest/quicktour.html#using-a-pretrained-tokenizer\\r\\n\\r\\n> You can load any tokenizer from the Hugging Face Hub as long as a `tokenizer.json` file is available in the repository.\\r\\n\\r\\nAnd sure enough, this seems to work:\\r\\n\\r\\n```\\r\\n>>> import tokenizers\\r\\n>>> from tokenizers import Tokenizer\\r\\n>>> tokenizer = Tokenizer.from_pretrained(\\\"TheBloke/Llama-2-70B-fp16\\\")\\r\\nDownloaded 1.76MiB in 0s\\r\\n>>> tokenizer.encode(\\\"hello world\\\")\\r\\nEncoding(num_tokens=3, attributes=[ids, type_ids, tokens, offsets, attention_mask, special_tokens_mask, overflowing])\\r\\n```\"}"
+    },
+    {
+      "id": "6c9e829c-c861-4c7a-8ad8-28c7060d50d0",
+      "type": "issue",
+      "locator": {
+        "number": 13,
+        "updated_at": "2024-05-02T23:37:31Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.174860+00:00",
+      "sha256": "70f137b36fa9e61d7247b2286c6a6b81301beeb6d4e86fcc28144bf65748ba0a",
+      "content": "{\"number\": 13, \"title\": \"Options for special token handling\", \"body\": \"Would be nice to have options for special token handling. I got this error today:\\r\\n\\r\\n```\\r\\nValueError: Encountered text corresponding to disallowed special token '<|endoftext|>'.\\r\\nIf you want this text to be encoded as a special token, pass it to `allowed_special`, e.g. `allowed_special={'<|endoftext|>', ...}`.\\r\\nIf you want this text to be encoded as normal text, disable the check for this token by passing `disallowed_special=(enc.special_tokens_set - {'<|endoftext|>'})`.\\r\\nTo disable this check for all special tokens, pass `disallowed_special=()`.\\r\\n```\"}"
+    },
+    {
+      "id": "deef2eb4-a88f-4a7f-8aae-7a18d66f1278",
+      "type": "issue",
+      "locator": {
+        "number": 10,
+        "updated_at": "2023-11-28T18:45:07Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.184761+00:00",
+      "sha256": "e70fec872e6e3fc4995f6419aa535989133a32fdf4bd22f99fc76839fec27c58",
+      "content": "{\"number\": 10, \"title\": \"ttok adds a 20 second delay when using llm-gpt4all when offline\", \"body\": \"ttok adds a 20 second delay when using llm-gpt4all in offline compared to online tested on mistral-7b-instruct-v0.\\r\\n\\r\\nThis is easily seen when looking at the CPU usage after asking the model a question as shown in this video:\\r\\n\\r\\n[llm-gpt4all offline and no CPU  usage before 20 seconds after question asked to mistral-7b-instruct-v0 .webm](https://github.com/simonw/llm-gpt4all/assets/24938923/ae6ba573-d9cf-4953-9e9c-c099ae619fb3)\\r\\n\\r\\nIn the video the CPU usage spikes when the model is asked a question using a custom plugin to Datasette that also uses ttok to log tokens used and hereafter no CPU usage until after the 20 second mark.\\r\\n\\r\\nThis delay is not visible when online.\\r\\n\\r\\nCode used:\\r\\nDockerfile:\\r\\n```Dockerfile\\r\\nFROM python:3.11\\r\\nWORKDIR /code\\r\\nCOPY ./requirements.txt /code/requirements.tx\"}"
+    },
+    {
+      "id": "bfb1eef2-1963-4aa5-9540-426aca74eec9",
+      "type": "issue",
+      "locator": {
+        "number": 3,
+        "updated_at": "2023-11-22T11:05:16Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.195756+00:00",
+      "sha256": "ba2a706fb48a5adcba6f9a767273850baab7dc5bb4760eb179d4de66292ecdce",
+      "content": "{\"number\": 3, \"title\": \"Mechanism for splitting rather than truncating\", \"body\": \"Suggestion from:\\r\\n- #2\"}"
+    },
+    {
+      "id": "743145af-1319-4fb0-bd23-147ca9d2576f",
+      "type": "issue",
+      "locator": {
+        "number": 4,
+        "updated_at": "2023-07-17T16:36:48Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.206243+00:00",
+      "sha256": "c32ff50ad3f7dd809ec5ba9cbef96c881bdfd62efaf8ee99fc44acac9cf9626b",
+      "content": "{\"number\": 4, \"title\": \"An additional option to view the actual tokenized text\", \"body\": \"Hi Simon - thanks for the nifty tooling. So useful when debugging with these models.\\r\\n\\r\\nWould like do a feature request to add an option to view the actual tokenized text (bytes produced). \\r\\nIt would be quick to do it from `ttok` with the other functionality it provides for quick exploration at the command line.\\r\\nWould also be easy to compare the differences in tokenization from different model variants easily.\\r\\n\\r\\nExample: \\r\\n```sh\\r\\necho -n \\\"this tool is much fineness!\\\" | ttok --bytes\\r\\n# [b'this', b' tool', b' is', b' much', b' fin', b'eness', b'!']\\r\\n```\"}"
+    },
+    {
+      "id": "b49d5676-c0b1-49eb-8102-efb72dc737d4",
+      "type": "issue",
+      "locator": {
+        "number": 7,
+        "updated_at": "2023-07-10T23:07:37Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.218196+00:00",
+      "sha256": "32e4923734387bc9c1364e39e35bff4208fd65734b144acdfa9e4da3536ab1dc",
+      "content": "{\"number\": 7, \"title\": \"Option to turn token integers back into text\", \"body\": \"The opposite of this:\\r\\n```\\r\\necho \\\"Show these tokens\\\" | ttok --tokens\\r\\n# Outputs: 7968 1521 11460 198\\r\\n```\"}"
+    },
+    {
+      "id": "b26ef87a-c0b1-40b5-a2d9-0a8785b70325",
+      "type": "issue",
+      "locator": {
+        "number": 6,
+        "updated_at": "2023-06-27T17:06:54Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.228171+00:00",
+      "sha256": "ba44ade4a16ebe2da55c2fad2f728124efb83b714321a625de1a847d5f2c2b1d",
+      "content": "{\"number\": 6, \"title\": \"Truncate => trim tokens\", \"body\": \"My original issue:\\r\\n\\r\\n> I'm not sure if this is out of scope, but a common pattern I have seen and played with involves tracking the last x-tokens of a large piece of text and not just the first x-characters. Why is this useful? If you are writing a story bot or code review bot, you might want to provide extra context so that OpenAI can continue working on a problem with the next prompt. \\r\\n\\r\\nUpdate: After giving this more thought, I think what's missing is some idea of trimming from the top or bottom versus truncating. For example, if I'm working on a story, then I might want the trim a bio from the first 400 tokens. But if I'm generating a story then I might want the last 1k tokens to keep the context of the story. Not sure if this sounds useful, but it's a use case that I see myself land\"}"
+    },
+    {
+      "id": "fa59100f-0f9d-4316-bd7e-344a60adef6f",
+      "type": "issue",
+      "locator": {
+        "number": 5,
+        "updated_at": "2023-05-21T19:47:56Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.238637+00:00",
+      "sha256": "59a15c5a9420624c341626febe1bd5db3c03ebbfe6d5c6bd74396519d6ff2d3a",
+      "content": "{\"number\": 5, \"title\": \"Verbose option\", \"body\": \"### What\\r\\nThe truncating text feature could make use of a `--verbose` option to display if text has been truncated (has exceeded the truncation limit), and maybe how many tokens are left.\\r\\n\\r\\n### Why\\r\\nIt can be useful to know if the text has effectively been truncated, as a warning that not all text has passed through, and maybe another pass is needed for the rest of the text.\\r\\n\\r\\nI can see people using `ttok` as safeguard before all their LLM API calls to avoid hitting the API tokens limits. When that limit is high and not expected to be hit, having a warning when it does will come in handy.\\r\\n\\r\\n### Notes\\r\\nThe logged warning should not be part of the stdout of `ttok` which is expected to be piped. Maybe stderr would fit more here.\"}"
+    },
+    {
+      "id": "1b700301-99c7-4606-afac-2c7eb705a1e7",
+      "type": "issue",
+      "locator": {
+        "number": 1,
+        "updated_at": "2023-05-18T19:49:36Z"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:46.248590+00:00",
+      "sha256": "354ca2fea72406c0d0a60040405299c7ed56319707847c528d4c8fd93d13b92e",
+      "content": "{\"number\": 1, \"title\": \"Initial design\", \"body\": \"It's a tool for piping in text and either counting the tokens or truncating them.\\r\\n\\r\\nUsing `tiktoken` - documented here: https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb\\r\\n\\r\\nIdea from:\\r\\n- https://github.com/simonw/strip-tags/issues/2\"}"
+    }
+  ],
+  "output": {
+    "summary": "Issue #25（已关闭）标题为“Default tokenizer should be the GPT-5 one”，正文仅有作者自述：0.4 已发布但该改动属破坏性变更，因此将发布 0.5，并计划直接发布 1.0。冻结证据中无代码、无默认 tokenizer 具体取值、无 GPT-5 编码名称信息，无法核实实现细节。Issue #15 提出过 o200k_base 支持，可作相关背景但非重复。分类为 feature，优先级因缺少影响记录留 unknown，复杂度 unknown，负责人无 CODEOWNERS 依据留空。",
+    "findings": [
+      {
+        "severity": "info",
+        "claim": "目标 Issue #25 标题主张默认 tokenizer 应改为 GPT-5 所用编码；正文未给出具体编码名或实现方案，仅说明 0.4 已发布、该变更属破坏性变更，故计划发 0.5，并最终跳到 1.0。",
+        "evidence_ids": [
+          "b58bf04e-e709-463e-82cb-18bd32ad2ee4"
+        ],
+        "location": "Issue #25 body",
+        "suggestion": "将默认编码切换（如适用）与破坏性版本发布说明绑定，并补充迁移说明与受影响用户提示。"
+      },
+      {
+        "severity": "info",
+        "claim": "Issue 当前状态为 closed，updated_at 为 2026-10-09T00:35:28Z；冻结证据中没有任何 PR、提交或发布记录可证明该变更已实现并发布。",
+        "evidence_ids": [
+          "b58bf04e-e709-463e-82cb-18bd32ad2ee4"
+        ],
+        "location": "Issue #25 state",
+        "suggestion": "若需核实完成情况，应引用对应 PR、CHANGELOG 或 release 证据，而非仅凭关闭状态。"
+      },
+      {
+        "severity": "low",
+        "claim": "历史上 #15 曾请求支持 gpt-4o 使用的 o200k_base 编码（依赖 tiktoken 0.7.0），说明默认/可选 tokenizer 演进是该仓库的既有主题，但 #15 与 #25 的具体诉求不同。",
+        "evidence_ids": [
+          "914c7543-898b-4d2c-91c3-39e8160d7c37",
+          "b58bf04e-e709-463e-82cb-18bd32ad2ee4"
+        ],
+        "location": "Issue #15 vs Issue #25",
+        "suggestion": "实现时复用既有模型-编码映射机制，并考虑与 #18（列出支持的模型）联动。"
+      },
+      {
+        "severity": "low",
+        "claim": "Issue #18 指出工具缺少列出受支持模型的命令，默认编码变更会扩大“模型名到编码”映射，缺少该列表会增加用户困惑。",
+        "evidence_ids": [
+          "334d6606-de00-442b-a426-6a13d8ef2dc5",
+          "b58bf04e-e709-463e-82cb-18bd32ad2ee4"
+        ],
+        "location": "Issue #18",
+        "suggestion": "在破坏性版本中一并提供模型/编码列表能力或清晰文档。"
+      }
+    ],
+    "hypotheses": [
+      {
+        "claim": "该 Issue 的落地可能需要更新 tiktoken 依赖以获取新编码定义，但冻结证据中无依赖版本或代码变更记录，无法确认。",
+        "supporting_evidence_ids": [
+          "914c7543-898b-4d2c-91c3-39e8160d7c37",
+          "b58bf04e-e709-463e-82cb-18bd32ad2ee4"
+        ],
+        "counter_evidence_ids": [],
+        "verification_steps": [
+          "检查项目依赖声明中 tiktoken 版本",
+          "确认目标编码是否被当前 tiktoken 版本内置"
+        ]
+      },
+      {
+        "claim": "默认编码变更会导致已有用户的 token 计数结果变化，可能属于破坏性变更并需要主版本号提升（正文亦如此表述）。",
+        "supporting_evidence_ids": [
+          "b58bf04e-e709-463e-82cb-18bd32ad2ee4"
+        ],
+        "counter_evidence_ids": [],
+        "verification_steps": [
+          "对比变更前后对同一文本的计数差异",
+          "查阅 CHANGELOG 中版本策略"
+        ]
+      }
+    ],
+    "missing_evidence": [
+      {
+        "item": "对应的 PR / 提交记录及实际改动",
+        "reason": "冻结证据仅含 Issue 文本，无代码或合并记录",
+        "impact": "无法核实变更是否实现、如何实现",
+        "next_action": "补充引用关联 PR 或 head_sha df24f500 的变更内容（如可得）"
+      },
+      {
+        "item": "GPT-5 所使用的编码名称及其在 tiktoken 中的可用性",
+        "reason": "Issue 正文未声明具体编码",
+        "impact": "无法判断实现路径与依赖要求",
+        "next_action": "查证官方文档或更新后的 tiktoken 支持列表"
+      },
+      {
+        "item": "版本发布记录（0.5 / 1.0）与 CHANGELOG",
+        "reason": "正文为计划性表述",
+        "impact": "无法确认破坏性变更的实际发布状态",
+        "next_action": "补充 release/CHANGELOG 证据"
+      },
+      {
+        "item": "CODEOWNERS 文件",
+        "reason": "目标快照中 owner_candidates_allowed 为空",
+        "impact": "无法给出有依据的负责人候选",
+        "next_action": "提供仓库 CODEOWNERS 内容"
+      }
+    ],
+    "next_actions": [
+      {
+        "description": "补充该 Issue 关联的 PR/提交与发布记录，用于核实默认编码变更的落地情况",
+        "owner_hint": null,
+        "draft_id": null
+      },
+      {
+        "description": "明确 GPT-5 对应编码名称，并核对依赖 tiktoken 版本支持",
+        "owner_hint": null,
+        "draft_id": null
+      },
+      {
+        "description": "在破坏性版本说明中记录默认编码变化及对计数结果的影响与迁移建议",
+        "owner_hint": null,
+        "draft_id": null
+      },
+      {
+        "description": "评估与 #18（列出支持模型）的联动，减少用户对模型名/编码的困惑",
+        "owner_hint": null,
+        "draft_id": null
+      }
+    ],
+    "limitations": [
+      "仅有 Issue 文本冻结证据，无代码、CI 或发布记录",
+      "快照 observed_at 与 freshness 为 unknown，不代表当前仓库状态",
+      "相似问题检索限于最近最多 20 个 Issue，不构成全仓库排重",
+      "无 CODEOWNERS 证据，负责人候选留空"
+    ],
+    "category": "feature",
+    "priority": "unknown",
+    "priority_reason": "冻结证据未记录用户影响范围、错误或数据；仅知为破坏性变更，不足以定级",
+    "priority_evidence_ids": [
+      "b58bf04e-e709-463e-82cb-18bd32ad2ee4"
+    ],
+    "complexity": "unknown",
+    "reproduction": [],
+    "missing_fields": [
+      "具体目标编码名称",
+      "受影响版本范围",
+      "是否保留旧编码作为可选",
+      "版本号策略确认（0.5 还是 1.0）"
+    ],
+    "owner_candidates": [],
+    "duplicate_candidates": [
+      {
+        "value": "15",
+        "reason": "#15 请求支持 gpt-4o 的 o200k_base，与默认 tokenizer 变更主题相近，但诉求对象不同，仅为可能相关",
+        "evidence_ids": [
+          "914c7543-898b-4d2c-91c3-39e8160d7c37"
+        ]
+      }
+    ],
+    "verdict": "not_applicable"
+  },
+  "prepared_target": [
+    {
+      "schema_version": "1.0",
+      "status": "partial",
+      "data": {
+        "number": 25,
+        "title": "Default tokenizer should be the GPT-5 one",
+        "state": "closed",
+        "updated_at": "2026-10-09T00:35:28Z",
+        "html_url": "https://github.com/simonw/ttok/issues/25",
+        "body": "Well this is embarrassing: I shipped 0.4 but this is a breaking change so I'll have to ship 0.5.\n\nI'm going to jump to 1.0 for this.",
+        "evidence_id": "b58bf04e-e709-463e-82cb-18bd32ad2ee4",
+        "owner_candidates_allowed": {},
+        "recent_issue_candidates": [
+          {
+            "number": 18,
+            "title": "FR: command to list supported models",
+            "body": "Feature request: add a command that lists the supported models\r\n\r\nThe tool accepts argument -m but does not seem to have a way to see what model names are valid.\r\nThe github page lists the valid model names, but I expect the list of valid names will grow with future versions of ttok.\r\n\r\nSo a command to list valid models would make it possible to figure out what model names are valid regardless of the version being run.",
+            "evidence_id": "334d6606-de00-442b-a426-6a13d8ef2dc5"
+          },
+          {
+            "number": 17,
+            "title": "Cannot use with files-to-prompt",
+            "body": "```\r\nfiles-to-prompt . -e ts | ttok\r\nError: Encountered text corresponding to disallowed special token '<|endoftext|>'.\r\nUse --allow-special to allow special tokens\r\n```\r\n\r\nthen\r\n\r\n```\r\nfiles-to-prompt . -e ts | ttok --allow-special\r\nError: Cannot use --allow-special without --encode or --tokens\r\n```\r\n\r\nThen with --encode or --tokens I cannot count it. I just want to see how many tokens would it use to query the current directory.",
+            "evidence_id": "9f77db00-65df-4cdd-b23a-7d8f83a453bf"
+          },
+          {
+            "number": 15,
+            "title": "Support for tokenizer used by gpt-4o models",
+            "body": "I noticed that gpt-4o uses (o200k_base) a different tokenizer than gpt-4 (cl100k_base). It looks like this was added https://github.com/openai/tiktoken/commit/9d01e5670ff50eb74cdb96406c7f3d9add0ae2f8#diff-0d973848bd229418209db2c46c86167000845592ca6b98fad215c21c317bc494R10 in tiktoken version [0.7.0](https://github.com/openai/tiktoken/releases/tag/0.7.0)\r\n\r\nIt would be useful if `ttok` could also be updated to use it",
+            "evidence_id": "914c7543-898b-4d2c-91c3-39e8160d7c37"
+          },
+          {
+            "number": 23,
+            "title": "BUG: `ttok` command produces duplicate parameter warnings",
+            "body": "### Description\nThe `ttok` command produces duplicate parameter warnings when executed via pipe input, indicating the `--tokens` parameter is defined multiple times in the Click CLI configuration.\n\n### Steps to Reproduce\n1. Install ttok via Homebrew: `brew install simonw/llm/ttok`\n2. Run ttok with piped input:\n```bash\n   cat tmp_vault.md | ttok\n```\n\n### Expected Behavior\nCommand should execute cleanly without warnings and display token count.\n\n### Actual Behavior\nCommand displays two UserWarnings before showing results:\n```\n/Users/andy16/.local/share/uv/tools/ttok/lib/python3.12/site-packages/click/core.py:1223: UserWarning: The parameter --tokens is used more than once. Remove its duplicate as parameters should be unique.\n  parser = self.make_parser(ctx)\n/Users/andy16/.local/share/uv/tool",
+            "evidence_id": "f3985ddb-3b7d-4e34-bb5d-211d7087905b"
+          },
+          {
+            "number": 20,
+            "title": "UserWarning coming from click library",
+            "body": "ttok is showing a UserWarning coming from the click library reporting that `--tokens` is used more than once:\n\n```sh\n$ ttok --version\n/Users/brian/.pyenv/versions/3.13.3/envs/llm-dev-3.13/lib/python3.13/site-packages/click/core.py:1193: UserWarning: The parameter --tokens is used more than once. Remove its duplicate as parameters should be unique.\n  parser = self.make_parser(ctx)\n/Users/brian/.pyenv/versions/3.13.3/envs/llm-dev-3.13/lib/python3.13/site-packages/click/core.py:1186: UserWarning: The parameter --tokens is used more than once. Remove its duplicate as parameters should be unique.\n  self.parse_args(ctx, args)\nttok, version 0.3\n```\n\nI can see where this started with click 8.2.0 which included adding this warning: https://github.com/pallets/click/issues/2396\n\nThe ttok utility stil",
+            "evidence_id": "3a832279-6be3-4cb9-9ab6-4c17fea4fc22"
+          },
+          {
+            "number": 11,
+            "title": "Does `ttok` need an internet connection?",
+            "body": "`ttok` either does not work or is very very slow when the internet connection is bad/non-existent. Is this a known design behavior or a bug?\r\n\r\nRelated:\r\n- #10 ",
+            "evidence_id": "d85718de-1096-49da-b4d0-615db20d7201"
+          },
+          {
+            "number": 21,
+            "title": "feature request: send a signal if the message was truncated or not",
+            "body": "I want to use ttok to truncate input, and inform the user if it was truncated. At the moment, that'd mean I have to call `ttok` twice as far as I can tell - once to count the tokens and a second time to truncate.\n\n`ttok` takes about 0.16 seconds to run on my machine even with minimal input, which means that two calls add up to .3 seconds, which is definitely perceptible to the user.\n\nYou probably can't alter the return code of `ttok -t` at this point; many users are likely depending on the return code being 0 whether it truncates or not.\n\nThe only way I can think of to implement this feature would be with another command-line flag for \"truncate and signal\", which would return a non-zero status code if it truncated the input - any out of band signalling mechanism I can think of seems like i",
+            "evidence_id": "7bbb27eb-3c99-455a-adc4-f30489249b0d"
+          },
+          {
+            "number": 8,
+            "title": "Ability to count tokens for models other than OpenAI",
+            "body": "Had a great tip [on Discord](https://discord.com/channels/823971286308356157/1128504153841336370/1150151127183134720) about `tokenziers` - which says: https://huggingface.co/docs/tokenizers/python/latest/quicktour.html#using-a-pretrained-tokenizer\r\n\r\n> You can load any tokenizer from the Hugging Face Hub as long as a `tokenizer.json` file is available in the repository.\r\n\r\nAnd sure enough, this seems to work:\r\n\r\n```\r\n>>> import tokenizers\r\n>>> from tokenizers import Tokenizer\r\n>>> tokenizer = Tokenizer.from_pretrained(\"TheBloke/Llama-2-70B-fp16\")\r\nDownloaded 1.76MiB in 0s\r\n>>> tokenizer.encode(\"hello world\")\r\nEncoding(num_tokens=3, attributes=[ids, type_ids, tokens, offsets, attention_mask, special_tokens_mask, overflowing])\r\n```",
+            "evidence_id": "5b07d301-6e3d-4f43-9425-9db9a90a9162"
+          },
+          {
+            "number": 13,
+            "title": "Options for special token handling",
+            "body": "Would be nice to have options for special token handling. I got this error today:\r\n\r\n```\r\nValueError: Encountered text corresponding to disallowed special token '<|endoftext|>'.\r\nIf you want this text to be encoded as a special token, pass it to `allowed_special`, e.g. `allowed_special={'<|endoftext|>', ...}`.\r\nIf you want this text to be encoded as normal text, disable the check for this token by passing `disallowed_special=(enc.special_tokens_set - {'<|endoftext|>'})`.\r\nTo disable this check for all special tokens, pass `disallowed_special=()`.\r\n```",
+            "evidence_id": "6c9e829c-c861-4c7a-8ad8-28c7060d50d0"
+          },
+          {
+            "number": 10,
+            "title": "ttok adds a 20 second delay when using llm-gpt4all when offline",
+            "body": "ttok adds a 20 second delay when using llm-gpt4all in offline compared to online tested on mistral-7b-instruct-v0.\r\n\r\nThis is easily seen when looking at the CPU usage after asking the model a question as shown in this video:\r\n\r\n[llm-gpt4all offline and no CPU  usage before 20 seconds after question asked to mistral-7b-instruct-v0 .webm](https://github.com/simonw/llm-gpt4all/assets/24938923/ae6ba573-d9cf-4953-9e9c-c099ae619fb3)\r\n\r\nIn the video the CPU usage spikes when the model is asked a question using a custom plugin to Datasette that also uses ttok to log tokens used and hereafter no CPU usage until after the 20 second mark.\r\n\r\nThis delay is not visible when online.\r\n\r\nCode used:\r\nDockerfile:\r\n```Dockerfile\r\nFROM python:3.11\r\nWORKDIR /code\r\nCOPY ./requirements.txt /code/requirements.tx",
+            "evidence_id": "deef2eb4-a88f-4a7f-8aae-7a18d66f1278"
+          },
+          {
+            "number": 3,
+            "title": "Mechanism for splitting rather than truncating",
+            "body": "Suggestion from:\r\n- #2",
+            "evidence_id": "bfb1eef2-1963-4aa5-9540-426aca74eec9"
+          },
+          {
+            "number": 4,
+            "title": "An additional option to view the actual tokenized text",
+            "body": "Hi Simon - thanks for the nifty tooling. So useful when debugging with these models.\r\n\r\nWould like do a feature request to add an option to view the actual tokenized text (bytes produced). \r\nIt would be quick to do it from `ttok` with the other functionality it provides for quick exploration at the command line.\r\nWould also be easy to compare the differences in tokenization from different model variants easily.\r\n\r\nExample: \r\n```sh\r\necho -n \"this tool is much fineness!\" | ttok --bytes\r\n# [b'this', b' tool', b' is', b' much', b' fin', b'eness', b'!']\r\n```",
+            "evidence_id": "743145af-1319-4fb0-bd23-147ca9d2576f"
+          },
+          {
+            "number": 7,
+            "title": "Option to turn token integers back into text",
+            "body": "The opposite of this:\r\n```\r\necho \"Show these tokens\" | ttok --tokens\r\n# Outputs: 7968 1521 11460 198\r\n```",
+            "evidence_id": "b49d5676-c0b1-49eb-8102-efb72dc737d4"
+          },
+          {
+            "number": 6,
+            "title": "Truncate => trim tokens",
+            "body": "My original issue:\r\n\r\n> I'm not sure if this is out of scope, but a common pattern I have seen and played with involves tracking the last x-tokens of a large piece of text and not just the first x-characters. Why is this useful? If you are writing a story bot or code review bot, you might want to provide extra context so that OpenAI can continue working on a problem with the next prompt. \r\n\r\nUpdate: After giving this more thought, I think what's missing is some idea of trimming from the top or bottom versus truncating. For example, if I'm working on a story, then I might want the trim a bio from the first 400 tokens. But if I'm generating a story then I might want the last 1k tokens to keep the context of the story. Not sure if this sounds useful, but it's a use case that I see myself land",
+            "evidence_id": "b26ef87a-c0b1-40b5-a2d9-0a8785b70325"
+          },
+          {
+            "number": 5,
+            "title": "Verbose option",
+            "body": "### What\r\nThe truncating text feature could make use of a `--verbose` option to display if text has been truncated (has exceeded the truncation limit), and maybe how many tokens are left.\r\n\r\n### Why\r\nIt can be useful to know if the text has effectively been truncated, as a warning that not all text has passed through, and maybe another pass is needed for the rest of the text.\r\n\r\nI can see people using `ttok` as safeguard before all their LLM API calls to avoid hitting the API tokens limits. When that limit is high and not expected to be hit, having a warning when it does will come in handy.\r\n\r\n### Notes\r\nThe logged warning should not be part of the stdout of `ttok` which is expected to be piped. Maybe stderr would fit more here.",
+            "evidence_id": "fa59100f-0f9d-4316-bd7e-344a60adef6f"
+          },
+          {
+            "number": 1,
+            "title": "Initial design",
+            "body": "It's a tool for piping in text and either counting the tokens or truncating them.\r\n\r\nUsing `tiktoken` - documented here: https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb\r\n\r\nIdea from:\r\n- https://github.com/simonw/strip-tags/issues/2",
+            "evidence_id": "1b700301-99c7-4606-afac-2c7eb705a1e7"
+          }
+        ],
+        "limitations": [
+          "没有可核查的 CODEOWNERS 候选，负责人建议保持为空",
+          "相似问题检索限定最近最多 20 个 Issue，不代表全仓库排重"
+        ]
+      },
+      "evidence_ids": [
+        "b58bf04e-e709-463e-82cb-18bd32ad2ee4",
+        "334d6606-de00-442b-a426-6a13d8ef2dc5",
+        "9f77db00-65df-4cdd-b23a-7d8f83a453bf",
+        "914c7543-898b-4d2c-91c3-39e8160d7c37",
+        "f3985ddb-3b7d-4e34-bb5d-211d7087905b",
+        "3a832279-6be3-4cb9-9ab6-4c17fea4fc22",
+        "d85718de-1096-49da-b4d0-615db20d7201",
+        "7bbb27eb-3c99-455a-adc4-f30489249b0d",
+        "5b07d301-6e3d-4f43-9425-9db9a90a9162",
+        "6c9e829c-c861-4c7a-8ad8-28c7060d50d0",
+        "deef2eb4-a88f-4a7f-8aae-7a18d66f1278",
+        "bfb1eef2-1963-4aa5-9540-426aca74eec9",
+        "743145af-1319-4fb0-bd23-147ca9d2576f",
+        "b49d5676-c0b1-49eb-8102-efb72dc737d4",
+        "b26ef87a-c0b1-40b5-a2d9-0a8785b70325",
+        "fa59100f-0f9d-4316-bd7e-344a60adef6f",
+        "1b700301-99c7-4606-afac-2c7eb705a1e7"
+      ],
+      "warnings": [],
+      "error": null,
+      "meta": {
+        "source": "fixed_target",
+        "observed_at": "2026-10-15T06:16:47.483848Z",
+        "freshness": "fresh",
+        "truncated": false,
+        "next_cursor": null
+      }
+    }
+  ],
+  "duration_seconds": 11.328,
+  "agent_usage": [
+    {
+      "total_tokens": 15288,
+      "estimated": false
+    }
+  ],
+  "config": {
+    "model": "deepseek-chat",
+    "prompt_sha256": "4a5b694d40318771919b2c4e9abd4f0e901532eb530573b80800e043549c20e8",
+    "source_case_sha256": "5d36a8db6ddb743a3eb880b24dc0b44b1d1fc6feb255a4db9f4cf4b05452a724",
+    "mode": "frozen_evidence_replay"
+  }
+}

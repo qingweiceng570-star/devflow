@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 
 from app.agents.probe import ProbeAgent
-from app.api.deps import current_identity, get_db, mutation_identity
+from app.api.deps import admin_identity, current_identity, get_db
 from app.core.errors import DomainError
 from app.domain.contracts import RepoScope
 from app.persistence.models import Probe, WorkerHeartbeat
@@ -33,15 +33,18 @@ def capabilities(request: Request, identity=Depends(current_identity), db=Depend
     )
     return envelope(
         {
-            "stage": "M3",
+            "stage": "M7",
+            "analysis_kinds": ["repo_health", "pr_review", "knowledge_qa", "issue_triage", "ci_debug", "release_check", "weekly_report"],
             "configured_provider": settings.llm_provider,
             "model_configured": settings.model_configured,
             "model": settings.llm_model or None,
             "fixture_available": True,
             "worker_online": worker_online,
             "github_sync": True,
-            "rag": False,
-            "external_writes": False,
+            "rag": True,
+            "external_writes": bool(settings.enabled_actions and settings.write_repo_allowlist and settings.github_write_token.get_secret_value()),
+            "enabled_actions": settings.enabled_actions,
+            "workflow_parallelism": settings.workflow_parallelism,
             "latest_probe": {
                 "id": str(latest.id),
                 "provider": latest.provider,
@@ -56,7 +59,7 @@ def capabilities(request: Request, identity=Depends(current_identity), db=Depend
 
 @router.post("/settings/capabilities/probe")
 async def probe(
-    body: ProbeRequest, request: Request, identity=Depends(mutation_identity), db=Depends(get_db)
+    body: ProbeRequest, request: Request, identity=Depends(admin_identity), db=Depends(get_db)
 ):
     settings = request.app.state.settings
     # M0 probe is a bounded protocol diagnostic, not a business/background analysis Run.

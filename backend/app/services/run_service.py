@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session as DBSession
 
+from app.agents.pr_review import PROMPT_VERSION
 from app.core.config import Settings
 from app.core.errors import DomainError
 from app.domain.enums import JobKind, MessageRole, RunKind, RunStatus
@@ -14,8 +15,15 @@ from app.jobs.queue import enqueue
 from app.persistence.models import BudgetAccount, Conversation, Message, Repository, Run, RunEvent
 from app.tools.executor import TOOLSET_VERSION
 
-PROMPT_VERSION = "pr_review.v1"
-PROMPT_VERSIONS = {"pr_review": PROMPT_VERSION, "knowledge_qa": "knowledge_qa.v1"}
+PROMPT_VERSIONS = {
+    "repo_health": "repo_health.v1",
+    "pr_review": PROMPT_VERSION,
+    "knowledge_qa": "knowledge_qa.v1",
+    "issue_triage": "issue_triage.v1",
+    "ci_debug": "ci_debug.v2",
+    "release_check": "release_check.v1",
+    "weekly_report": "weekly_report.v1",
+}
 
 ACTIVE_RUN_STATUSES = (
     RunStatus.QUEUED,
@@ -29,7 +37,7 @@ TERMINAL_RUN_STATUSES = (
     RunStatus.TIMED_OUT,
 )
 
-VALID_KINDS = {RunKind.PR_REVIEW.value, RunKind.KNOWLEDGE_QA.value}
+VALID_KINDS = {kind.value for kind in RunKind}
 
 
 def next_event_seq(db: DBSession, run_id: UUID) -> int:
@@ -71,12 +79,32 @@ def config_snapshot(settings: Settings, kind: str) -> dict:
         "model_output_token_limit": settings.model_output_token_limit,
         "max_diff_files": settings.max_diff_files,
         "max_diff_bytes": settings.max_diff_bytes,
+        "workflow_token_budget": settings.workflow_token_budget,
+        "workflow_timeout_seconds": settings.workflow_timeout_seconds,
     }
 
 
 def validate_target(kind: str, target: dict) -> dict:
+    if kind in {"release_check", "weekly_report"}:
+        from pydantic import ValidationError
+
+        from app.workflows.contracts import ReleaseTarget, WeeklyTarget
+        try:
+            return (ReleaseTarget if kind == "release_check" else WeeklyTarget).model_validate(target).model_dump(mode="json", exclude_none=True)
+        except ValidationError:
+            raise DomainError("INVALID_REQUEST", "工作流参数无效", 400) from None
     if kind not in VALID_KINDS:
         raise DomainError("INVALID_REQUEST", f"暂不支持的分析类型: {kind}", 400)
+    if kind in {"issue_triage", "ci_debug"}:
+        from pydantic import ValidationError
+
+        from app.schemas.requests import CiTarget, IssueTarget
+
+        try:
+            schema = IssueTarget if kind == "issue_triage" else CiTarget
+            return schema.model_validate(target, strict=True).model_dump(exclude_none=True)
+        except ValidationError:
+            raise DomainError("INVALID_REQUEST", "分析目标参数无效", 400) from None
     if kind == RunKind.PR_REVIEW.value:
         pr_number = target.get("pr_number")
         if not isinstance(pr_number, int) or isinstance(pr_number, bool) or pr_number < 1:
@@ -104,6 +132,8 @@ def submit_run(
     if len(text) > settings.max_message_chars:
         raise DomainError("PAYLOAD_TOO_LARGE", "消息超过长度上限", 413)
     cleaned_target = validate_target(kind, target)
+    from app.persistence.models import ExtensionConfig
+    extension_ids = [str(value) for value in db.scalars(select(ExtensionConfig.id).where(ExtensionConfig.repo_id == repo.id, ExtensionConfig.state == "active"))]
 
     existing = db.scalar(
         select(Run).where(
@@ -126,7 +156,7 @@ def submit_run(
         kind=kind,
         status=RunStatus.QUEUED,
         target=cleaned_target,
-        config_snapshot=config_snapshot(settings, kind),
+        config_snapshot={**config_snapshot(settings, kind), "extensions": extension_ids},
     )
     db.add(run)
     db.flush()
@@ -141,12 +171,12 @@ def submit_run(
     db.add(message)
     db.flush()
     run.context_through_seq = message.seq
-    db.add(BudgetAccount(run_id=run.id, limit_tokens=settings.agent_total_token_budget))
+    db.add(BudgetAccount(run_id=run.id, limit_tokens=settings.workflow_token_budget if kind == "release_check" else settings.agent_total_token_budget))
     enqueue(
         db,
         kind=JobKind.ANALYZE,
         entity_id=run.id,
-        max_attempts=1,  # analysis is not auto-retried; the user starts a new run
+        max_attempts=3 if kind == "release_check" else 1,
     )
     conversation.updated_at = now
     emit(db, run, "run.queued", {"kind": kind, "target": cleaned_target})
@@ -167,8 +197,9 @@ def request_cancel(db: DBSession, run: Run) -> Run:
 def cancel_requested(db_factory, run_id: UUID) -> bool:
     """Fresh check used between model/tool steps."""
     with db_factory() as db:
-        value = db.scalar(select(Run.cancel_requested_at).where(Run.id == run_id))
-        return value is not None
+        run = db.get(Run, run_id)
+        parent = db.get(Run, run.parent_run_id) if run and run.parent_run_id else None
+        return bool(run and (run.cancel_requested_at or (parent and parent.cancel_requested_at)))
 
 
 def mark_running(db: DBSession, run: Run) -> None:
@@ -197,6 +228,8 @@ def finalize_run(
     stop_reason: str | None = None,
     error: dict | None = None,
     assistant_text: str | None = None,
+    job_id: UUID | None = None,
+    job_epoch: int | None = None,
 ) -> bool:
     """Conditional terminal transition (README 17.4).
 
@@ -204,6 +237,18 @@ def finalize_run(
     decided the terminal state; the caller must not write further events.
     """
     now = datetime.now(UTC)
+    if job_id is not None:
+        from app.jobs.queue import LeaseLost
+        from app.persistence.models import Job
+        from app.services.auth_service import as_utc
+        job = db.scalar(select(Job).where(Job.id == job_id).with_for_update().execution_options(populate_existing=True))
+        if not job or job.status != "leased" or job.lease_epoch != job_epoch or not job.lease_until or as_utc(job.lease_until) <= now:
+            db.rollback()
+            raise LeaseLost()
+    if status == RunStatus.COMPLETED and run.parent_run_id:
+        parent = db.scalar(select(Run).where(Run.id == run.parent_run_id).with_for_update().execution_options(populate_existing=True))
+        if parent and (parent.cancel_requested_at or parent.status in (RunStatus.CANCELLED, RunStatus.TIMED_OUT, RunStatus.FAILED)):
+            status, assistant_text, result = RunStatus.CANCELLED, None, None
     if assistant_text is not None and run.conversation_id is not None:
         db.add(
             Message(
@@ -224,13 +269,20 @@ def finalize_run(
         "finished_at": now,
         "updated_at": now,
     }
+    conditions = [Run.id == run.id, Run.status.in_(ACTIVE_RUN_STATUSES)]
+    if status == RunStatus.COMPLETED:
+        conditions.append(Run.cancel_requested_at.is_(None))
+        conditions.append(Run.status.in_((RunStatus.RUNNING, RunStatus.RECOVERING)))
     outcome = db.execute(
         update(Run)
-        .where(Run.id == run.id, Run.status.in_((RunStatus.RUNNING, RunStatus.RECOVERING)))
+        .where(*conditions)
         .values(**values)
     )
     if outcome.rowcount != 1:
         db.rollback()
+        db.refresh(run)
+        if run.cancel_requested_at and run.status in ACTIVE_RUN_STATUSES:
+            finalize_run(db, run, status=RunStatus.CANCELLED)
         return False
     for key, value in values.items():
         setattr(run, key, value)

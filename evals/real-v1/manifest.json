@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "origin": "previously_authorized_live_runs",
+  "captured_at": "2026-10-15T09:01:57.716019+00:00",
+  "model_requests": 0,
+  "cases": [
+    {
+      "id": "issue-25",
+      "file": "issue-25.json",
+      "sha256": "a8c872a329114492b624a69143c732cc8be13acc8136e8cc77de2826a418fb3c"
+    },
+    {
+      "id": "ci-37859163438",
+      "file": "ci-37859163438.json",
+      "sha256": "d09ba25f1ca94eff94d5ac5b0a3f5e16fd8019cd34cb4f9c8d5692a7e75cc05c"
+    },
+    {
+      "id": "pr-16",
+      "file": "pr-16.json",
+      "sha256": "5af792eb564445227189eaa45c7a09c05e9ba075e26a0047e80a7bdef9d95b16"
+    }
+  ]
+}

@@ -108,3 +108,12 @@ def test_login_limiter(client):
         ).status_code
         == 429
     )
+
+
+def test_successful_logins_do_not_consume_the_failure_budget(client):
+    body = {"username": "admin", "password": PASSWORD}
+    for _ in range(12):
+        response = client.post(
+            "/api/v1/auth/login", json=body, headers={"Origin": "http://localhost:3100"}
+        )
+        assert response.status_code == 200

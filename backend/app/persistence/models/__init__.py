@@ -15,6 +15,20 @@ from app.persistence.models.knowledge import (
     IndexMembership,
     IndexOutbox,
 )
+from app.persistence.models.platform import (
+    ActionDraft,
+    ActionExecution,
+    ActionVersion,
+    AuditEvent,
+    BudgetReservation,
+    ConversationSummary,
+    ExtensionConfig,
+    MemoryCandidate,
+    MemoryVersion,
+    TaskRun,
+    WeeklyReport,
+    WorkflowCheckpoint,
+)
 from app.persistence.models.repository import (
     ActivityEvent,
     CiJob,
@@ -38,6 +52,9 @@ from app.persistence.models.runs import (
 from app.persistence.models.sync import SyncCursor, SyncRun
 
 __all__ = [
+    "ActionDraft", "ActionExecution", "ActionVersion", "AuditEvent", "BudgetReservation",
+    "ConversationSummary", "ExtensionConfig", "MemoryCandidate", "MemoryVersion",
+    "TaskRun", "WeeklyReport", "WorkflowCheckpoint",
     "ActivityEvent",
     "AgentRun",
     "BudgetAccount",

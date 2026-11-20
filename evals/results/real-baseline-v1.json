@@ -1,0 +1,81 @@
+{
+  "mode": "real_case_offline_review",
+  "dataset_version": "1.0",
+  "sample_count": 3,
+  "repository_count": 1,
+  "split": "development",
+  "reviewer_type": "assistant_source_review",
+  "human_review_status": "pending",
+  "model_requests": 0,
+  "findings": 10,
+  "adjudicated_findings": 8,
+  "uncertain_findings": 2,
+  "provisional_factual_precision": 0.75,
+  "provisional_false_discovery_rate": 0.25,
+  "fully_supported_citation_rate": 0.3,
+  "reference_verdict_accuracy": 1.0,
+  "median_duration_seconds": 15.279348,
+  "total_recorded_tokens": 26138,
+  "recall": null,
+  "recall_note": "No independent exhaustive defect gold set; recall is not measurable yet",
+  "generalization_claim": false,
+  "cases": [
+    {
+      "case": "issue-25",
+      "kind": "issue_triage",
+      "findings": 2,
+      "truth": {
+        "supported": 2,
+        "refuted": 0,
+        "uncertain": 0
+      },
+      "factual_precision": 1.0,
+      "false_discovery_rate": 0.0,
+      "fully_supported_citations": 2,
+      "citation_integrity": 1.0,
+      "verdict_correct": true,
+      "duration_seconds": 40.342896,
+      "total_tokens": 10290,
+      "usage_estimated": false
+    },
+    {
+      "case": "ci-37859163438",
+      "kind": "ci_debug",
+      "findings": 4,
+      "truth": {
+        "supported": 4,
+        "refuted": 0,
+        "uncertain": 0
+      },
+      "factual_precision": 1.0,
+      "false_discovery_rate": 0.0,
+      "fully_supported_citations": 1,
+      "citation_integrity": 1.0,
+      "verdict_correct": true,
+      "duration_seconds": 15.279348,
+      "total_tokens": 6289,
+      "usage_estimated": false
+    },
+    {
+      "case": "pr-16",
+      "kind": "pr_review",
+      "findings": 4,
+      "truth": {
+        "supported": 0,
+        "refuted": 2,
+        "uncertain": 2
+      },
+      "factual_precision": 0.0,
+      "false_discovery_rate": 1.0,
+      "fully_supported_citations": 0,
+      "citation_integrity": 1.0,
+      "verdict_correct": true,
+      "duration_seconds": 12.166717,
+      "total_tokens": 9559,
+      "usage_estimated": false
+    }
+  ],
+  "dataset_sha256": "8865fd85e3408b87635d1ee8e959f9ae2c9a860435981b493daa9c29326b70f5",
+  "reference_review_sha256": "d920152aff3a79cbd19dbe4d1a52bfd453cf16fefa3ef4965613925b4e28e372",
+  "scorer_sha256": "ee08b81f5af31e452f9b7d7bd4be9d52d5c50e38eed81c6834d4cb920191270c"
+}

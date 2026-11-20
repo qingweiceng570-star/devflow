@@ -1,0 +1,219 @@
+{
+  "id": "ci-37859163438",
+  "repository": "simonw/ttok",
+  "kind": "ci_debug",
+  "target": {
+    "ci_run_id": 37859163438,
+    "attempt": 1,
+    "head_sha": "5a6ae1b7dc05a026085a25253fc27e2be5d5c0a2"
+  },
+  "evidence": [
+    {
+      "id": "2496f93c-b894-493e-9218-4462452894e1",
+      "type": "ci_run",
+      "locator": {
+        "ci_run_id": 37859163438,
+        "attempt": 1
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:59.134843+00:00",
+      "sha256": "39d3d5fc4ebf28192c578aa6f4beec72ec0d8e75cba6daa22a2b68f202f49e64",
+      "content": "{\"id\": 37859163438, \"run_attempt\": 1, \"head_sha\": \"5a6ae1b7dc05a026085a25253fc27e2be5d5c0a2\", \"status\": \"completed\", \"conclusion\": \"failure\", \"name\": \"Test\", \"updated_at\": \"2026-10-08T23:23:46Z\"}"
+    }
+  ],
+  "output": {
+    "summary": "固定目标为仓库 simonw/ttok 的 CI run 37859163438（attempt 1，head 5a6ae1b…，workflow \"Test\"），冻结快照显示该 run 状态 completed、结论 failure。5 个 job 中仅 test (3.12)（113590523680）为 failure，其余 4 个（3.10/3.11/3.13/3.14）均为 cancelled。error_blocks 为空，且失败 job 的日志不可用，因此无法判定根因，cause_category 记为 unknown，不作任何合入或发布判断。",
+    "findings": [
+      {
+        "severity": "high",
+        "claim": "目标 run 37859163438（attempt 1，head_sha 5a6ae1b7dc05a026085a25253fc27e2be5d5c0a2）状态为 completed，结论为 failure。",
+        "evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "location": "ci_run 37859163438 / attempt 1",
+        "suggestion": "仅在获得失败 job 的日志后再定论根因；本结论不构成合入或发布判断。"
+      },
+      {
+        "severity": "high",
+        "claim": "在 5 个 job 中，只有 test (3.12)（job 113590523680）为 completed/failure；test (3.10)、test (3.11)、test (3.13)、test (3.14) 均为 completed/cancelled，需与 failure 区别对待，取消不等于出现错误。",
+        "evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "location": "jobs: 113590523410/113590523651/113590523682/113590523782 (cancelled), 113590523680 (failure)",
+        "suggestion": "不要把 4 个 cancelled job 计为失败或 flaky；如需判断取消原因，另行获取这些 job 的日志与事件。"
+      },
+      {
+        "severity": "medium",
+        "claim": "冻结证据中的 error_blocks 为空，且缺少 test (3.12) 的日志内容，因此没有任何证据指向失败的具体原因（代码、测试、依赖、环境或资源）。",
+        "evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "location": "error_blocks / job 113590523680 日志",
+        "suggestion": "补充失败 job 的步骤级日志与失败测试输出后，再确定 cause_category。"
+      },
+      {
+        "severity": "info",
+        "claim": "快照声明本次为历史证据重放（FROZEN_EVIDENCE_ONLY），观察时间为 2026-10-26，run 更新时间 2026-10-08T23:23:46Z；因此该结论只反映冻结时刻，不代表当前状态。",
+        "evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "location": "evidence meta / ci_run.updated_at",
+        "suggestion": "将本条作为历史记录引用，不必视为当下的失败状态。"
+      }
+    ],
+    "hypotheses": [
+      {
+        "claim": "test (3.12) 的失败源于代码或测试本身的问题。",
+        "supporting_evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "counter_evidence_ids": [],
+        "verification_steps": [
+          "取回 job 113590523680 的失败步骤日志与堆栈，定位具体测试或异常"
+        ]
+      },
+      {
+        "claim": "test (3.12) 的失败源于依赖或环境（矩阵 Python 3.12 特有）问题，这也可能同时导致其他矩阵 job 被取消。",
+        "supporting_evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "counter_evidence_ids": [],
+        "verification_steps": [
+          "对比 3.12 与其他矩阵版本 job 的安装或启动步骤日志",
+          "检查 job 取消的触发事件（例如 workflow 的 fail-fast）"
+        ]
+      },
+      {
+        "claim": "其他 job 的 cancelled 是失败 job 触发 fail-fast 后被动取消，而不是自身出错；此说法缺少日志支持。",
+        "supporting_evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "counter_evidence_ids": [],
+        "verification_steps": [
+          "获取 test (3.10)/(3.11)/(3.13)/(3.14) 的日志尾部与取消事件时间线"
+        ]
+      }
+    ],
+    "missing_evidence": [
+      {
+        "item": "job 113590523680 (test 3.12) 的步骤级日志",
+        "reason": "快照限制说明日志不可用：可能已过期、不存在或权限不足",
+        "impact": "无法定位失败测试、异常或错误码，根因分类只能为 unknown",
+        "next_action": "在具备权限的环境中拉取该 job 的完整日志（仅作为分析材料，不重跑 CI）"
+      },
+      {
+        "item": "job 步骤级别的状态与结论（steps 明细）",
+        "reason": "返回数据只包含 job 级状态",
+        "impact": "无法确定失败发生在哪个步骤（例如依赖安装、测试执行等）",
+        "next_action": "读取该 job 的 steps 列表与各步结论"
+      },
+      {
+        "item": "4 个 cancelled job 的日志与取消原因",
+        "reason": "证据中只有 job 结论字段",
+        "impact": "无法区分主动取消与因失败连带的取消",
+        "next_action": "获取取消事件及日志尾部"
+      }
+    ],
+    "next_actions": [
+      {
+        "description": "获取 test (3.12) 失败步骤日志与失败测试输出，用于确认 cause_category。",
+        "owner_hint": "CI 维护者",
+        "draft_id": null
+      },
+      {
+        "description": "核对矩阵各版本 job 的取消事件时间线，确认是否存在 fail-fast 连带取消。",
+        "owner_hint": "CI 维护者",
+        "draft_id": null
+      }
+    ],
+    "limitations": [
+      "仅有 1 条 ci_run 级证据，无任何 job 日志块或 error_blocks",
+      "失败 job 日志不可用，因此 cause_category 只能为 unknown",
+      "快照为历史冻结重放，不代表当前 run 状态",
+      "单次失败无法证明 flaky，也无法证明由某 PR 引入",
+      "本助手只读，不执行命令、不发布评论、不重跑 CI"
+    ],
+    "cause_category": "unknown",
+    "verification_steps": [],
+    "fix_suggestions": [],
+    "verdict": "not_applicable"
+  },
+  "prepared_target": [
+    {
+      "schema_version": "1.0",
+      "status": "partial",
+      "data": {
+        "id": 37859163438,
+        "run_attempt": 1,
+        "head_sha": "5a6ae1b7dc05a026085a25253fc27e2be5d5c0a2",
+        "status": "completed",
+        "conclusion": "failure",
+        "name": "Test",
+        "updated_at": "2026-10-08T23:23:46Z",
+        "jobs": [
+          {
+            "id": 113590523410,
+            "name": "test (3.14)",
+            "status": "completed",
+            "conclusion": "cancelled"
+          },
+          {
+            "id": 113590523651,
+            "name": "test (3.11)",
+            "status": "completed",
+            "conclusion": "cancelled"
+          },
+          {
+            "id": 113590523680,
+            "name": "test (3.12)",
+            "status": "completed",
+            "conclusion": "failure"
+          },
+          {
+            "id": 113590523682,
+            "name": "test (3.13)",
+            "status": "completed",
+            "conclusion": "cancelled"
+          },
+          {
+            "id": 113590523782,
+            "name": "test (3.10)",
+            "status": "completed",
+            "conclusion": "cancelled"
+          }
+        ],
+        "error_blocks": [],
+        "evidence_id": "2496f93c-b894-493e-9218-4462452894e1",
+        "limitations": [
+          "job 113590523680：日志不可用：可能过期、不存在或权限不足",
+          "目标 CI 失败但缺少日志证据，不能判断根因"
+        ]
+      },
+      "evidence_ids": [
+        "2496f93c-b894-493e-9218-4462452894e1"
+      ],
+      "warnings": [],
+      "error": null,
+      "meta": {
+        "source": "fixed_target",
+        "observed_at": "2026-10-15T06:17:02.990941Z",
+        "freshness": "fresh",
+        "truncated": false,
+        "next_cursor": null
+      }
+    }
+  ],
+  "duration_seconds": 8.922,
+  "agent_usage": [
+    {
+      "total_tokens": 5570,
+      "estimated": false
+    }
+  ],
+  "config": {
+    "model": "deepseek-chat",
+    "prompt_sha256": "971afb087e689bc7b26a4d1132b28f86626488d45c225bc4631db7febb7b0763",
+    "source_case_sha256": "6724f5affcac9f56a7fa40fb5e52bea349e2c4731a3f7050121233b0162aedd9",
+    "mode": "frozen_evidence_replay"
+  }
+}

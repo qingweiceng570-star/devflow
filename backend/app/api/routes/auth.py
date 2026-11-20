@@ -16,27 +16,36 @@ router = APIRouter()
 
 
 class LoginLimiter:
-    """Single-API-process M0 limiter; persistent distributed limiting is a later stage."""
+    """Single-API-process M0 limiter; persistent distributed limiting is a later stage.
+
+    Only failed credential checks consume the budget, so automated checks and
+    normal re-logins are not locked out by repeated successful sign-ins.
+    """
 
     def __init__(self):
         self.attempts = defaultdict(deque)
         self.lock = threading.Lock()
 
+    def _prune(self, key):
+        now = time.monotonic()
+        for stale_key in list(self.attempts):
+            queue = self.attempts[stale_key]
+            while queue and queue[0] <= now - 60:
+                queue.popleft()
+            if not queue:
+                del self.attempts[stale_key]
+        return self.attempts[key]
+
     def check(self, key):
         with self.lock:
-            now = time.monotonic()
-            for stale_key in list(self.attempts):
-                queue = self.attempts[stale_key]
-                while queue and queue[0] <= now - 60:
-                    queue.popleft()
-                if not queue:
-                    del self.attempts[stale_key]
-            attempts = self.attempts[key]
-            if len(attempts) >= 10:
+            if len(self._prune(key)) >= 10:
                 raise DomainError(
                     "RATE_LIMITED", "登录尝试过多，请一分钟后重试", 429, retryable=True
                 )
-            attempts.append(now)
+
+    def failure(self, key):
+        with self.lock:
+            self._prune(key).append(time.monotonic())
 
 
 def user_data(user):
@@ -47,8 +56,14 @@ def user_data(user):
 def login_route(body: LoginRequest, request: Request, response: Response, db=Depends(get_db)):
     settings = request.app.state.settings
     client = request.client.host if request.client else "unknown"
-    request.app.state.login_limiter.check(client)
-    user, token, csrf = login(db, body.username, body.password, settings.session_hours)
+    limiter = request.app.state.login_limiter
+    limiter.check(client)
+    try:
+        user, token, csrf = login(db, body.username, body.password, settings.session_hours)
+    except DomainError as error:
+        if error.code == "INVALID_CREDENTIALS":
+            limiter.failure(client)
+        raise
     cookie_options = dict(
         secure=settings.cookie_secure,
         samesite="strict",

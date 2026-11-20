@@ -44,6 +44,12 @@ def _fail(factory, settings, job, epoch: int, error: dict, *, retryable: bool, r
             retry_after=retry_after,
         )
         db.commit()
+        if status == "failed" and row.kind == "analyze":
+            from app.persistence.models import Run
+            from app.services.run_service import ACTIVE_RUN_STATUSES, finalize_run
+            run = db.get(Run, row.entity_id)
+            if run and run.status in ACTIVE_RUN_STATUSES:
+                finalize_run(db, run, status="failed", error=error)
     log.info("job_finished id=%s status=%s", job.id, status)
 
 
@@ -112,6 +118,14 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     log.info("M1 worker started worker_id=%s", worker_id)
     last_recovery = 0.0
+    def heartbeat_loop():
+        while not stopped.wait(settings.worker_heartbeat_seconds):
+            try:
+                _heartbeat(factory, worker_id)
+            except Exception:
+                log.warning("worker_heartbeat_unavailable")
+    heartbeat_thread = threading.Thread(target=heartbeat_loop, daemon=True)
+    heartbeat_thread.start()
     try:
         while not stopped.is_set():
             try:

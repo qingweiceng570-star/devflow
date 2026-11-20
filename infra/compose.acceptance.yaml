@@ -1,0 +1,20 @@
+# Isolated clean-install rehearsal. Always use -p devflow-acceptance.
+# Never shares the development database volume or storage directory.
+services:
+  db:
+    ports: !override ["127.0.0.1:55433:5432"]
+  migrate:
+    environment:
+      APP_ORIGIN: http://localhost:13100
+    volumes: ["../var/clean-acceptance:/data"]
+  api:
+    environment:
+      APP_ORIGIN: http://localhost:13100
+    ports: !override ["127.0.0.1:18100:8100"]
+    volumes: ["../var/clean-acceptance:/data"]
+  worker:
+    environment:
+      APP_ORIGIN: http://localhost:13100
+    volumes: ["../var/clean-acceptance:/data"]
+  web:
+    ports: !override ["127.0.0.1:13100:3100"]

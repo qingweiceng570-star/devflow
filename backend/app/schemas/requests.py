@@ -5,6 +5,7 @@ from pydantic import Field, model_validator
 
 from app.domain.contracts import Contract
 from app.domain.enums import SyncResource
+from app.workflows.contracts import ReleaseTarget, WeeklyTarget
 
 
 class LoginRequest(Contract):
@@ -18,7 +19,9 @@ class ProbeRequest(Contract):
 
 
 class RegisterRepoRequest(Contract):
-    full_name: str = Field(min_length=3, max_length=201)
+    # Accepts either owner/repo or a pasted GitHub link; the service normalizes
+    # it. The bound leaves room for deep links while still limiting input size.
+    full_name: str = Field(min_length=3, max_length=2048)
     credential_ref: str = Field(default="github-default", min_length=1, max_length=80)
 
 
@@ -44,15 +47,36 @@ class PrReviewTarget(Contract):
     pr_number: int = Field(ge=1)
 
 
+class IssueTarget(Contract):
+    issue_number: int = Field(ge=1)
+
+
+class CiTarget(Contract):
+    ci_run_id: int = Field(ge=1)
+    attempt: int = Field(ge=1)
+    job_id: int | None = Field(default=None, ge=1)
+
+
 class SubmitRunRequest(Contract):
     message: str = Field(min_length=1, max_length=64000)
-    kind: Literal["pr_review", "knowledge_qa"] = "pr_review"
-    target: PrReviewTarget | None = None
+    kind: Literal["repo_health", "pr_review", "knowledge_qa", "issue_triage", "ci_debug", "release_check", "weekly_report"] = "pr_review"
+    target: PrReviewTarget | IssueTarget | CiTarget | ReleaseTarget | WeeklyTarget | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse_target(cls, data):
+        schemas = {"pr_review": PrReviewTarget, "issue_triage": IssueTarget, "ci_debug": CiTarget, "release_check": ReleaseTarget, "weekly_report": WeeklyTarget}
+        if isinstance(data, dict) and isinstance(data.get("target"), dict) and data.get("kind", "pr_review") in schemas:
+            data = {**data, "target": schemas[data.get("kind", "pr_review")].model_validate(data["target"])}
+        return data
 
     @model_validator(mode="after")
     def require_target(self) -> "SubmitRunRequest":
-        if self.kind == "pr_review" and self.target is None:
-            raise ValueError("pr_review 需要 target.pr_number")
+        expected = {"pr_review": PrReviewTarget, "issue_triage": IssueTarget, "ci_debug": CiTarget, "release_check": ReleaseTarget, "weekly_report": WeeklyTarget}
+        if self.kind in expected and not isinstance(self.target, expected[self.kind]):
+            raise ValueError("分析类型与目标参数不匹配")
+        if self.kind in {"repo_health", "knowledge_qa"} and self.target is not None:
+            raise ValueError("knowledge_qa 不接受对象目标")
         return self
 
 

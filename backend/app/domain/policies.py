@@ -59,7 +59,7 @@ def required_checks_status(
     """Evaluate required checks against runs matched to the target head.
 
     Returns (configured, all_passed, detail). A check name may match a workflow
-    name exactly; the latest attempt wins. Missing checks count as not passed.
+    name exactly; the latest attempt wins. Missing or unfinished checks remain unknown.
     """
     if not configured:
         return False, None, []
@@ -71,13 +71,17 @@ def required_checks_status(
             latest[name] = run
     detail: list[str] = []
     all_passed = True
+    unknown = False
     for check in configured:
         run = latest.get(check)
         if run is None:
-            all_passed = False
+            unknown = True
             detail.append(f"{check}: 无匹配运行")
             continue
-        if run.get("status") != "completed" or run.get("conclusion") != "success":
+        if run.get("status") != "completed" or run.get("conclusion") is None:
+            unknown = True
+            detail.append(f"{check}: 尚无完成结果")
+        elif run.get("conclusion") != "success":
             all_passed = False
             detail.append(f"{check}: {run.get('status')}/{run.get('conclusion')}")
-    return True, all_passed, detail
+    return True, None if all_passed and unknown else all_passed, detail

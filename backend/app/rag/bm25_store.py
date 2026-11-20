@@ -6,6 +6,7 @@ formula (k1=1.5, b=0.75); results are deterministic (score desc, chunk id asc).
 """
 
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -80,8 +81,7 @@ class Bm25Index:
             if not docs:
                 continue
             df = len(docs)
-            idf = ((self.doc_count - df + 0.5) / (df + 0.5)) + 1.0
-            idf = max(idf, 0.0)
+            idf = math.log1p((self.doc_count - df + 0.5) / (df + 0.5))
             for doc_index, tf in docs.items():
                 length = self.lengths[doc_index] or 1
                 norm = 1 - BM25_B + BM25_B * length / (self.avg_length or 1)

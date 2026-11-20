@@ -1,0 +1,5 @@
+import {defineConfig} from "@playwright/test";
+import {existsSync} from "node:fs";
+import {resolve} from "node:path";
+const executable=[process.env.PLAYWRIGHT_EXECUTABLE_PATH,"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe","C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"].find(p=>p&&existsSync(p));
+export default defineConfig({testDir:"./tests/flows",workers:1,fullyParallel:false,timeout:30000,reporter:"list",use:{baseURL:"http://localhost:13110",headless:true,launchOptions:{executablePath:executable},trace:"retain-on-failure",screenshot:"only-on-failure"},webServer:[{command:`"${resolve("../backend/.venv/Scripts/python.exe")}" -X utf8 "${resolve("../scripts/e2e_server.py")}"`,url:"http://127.0.0.1:18110/api/v1/health/ready",reuseExistingServer:false,timeout:30000},{command:"node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 13110",url:"http://localhost:13110/login",env:{DEVFLOW_API_URL:"http://127.0.0.1:18110"},reuseExistingServer:false,timeout:30000}]});

@@ -16,14 +16,21 @@ def configure(settings):
     return settings
 
 
-async def test_http_tool_protocol(settings):
+@pytest.mark.parametrize("thinking_mode", ["provider_default", "disabled"])
+async def test_http_tool_protocol(settings, thinking_mode):
     configure(settings)
+    settings.llm_thinking_mode = thinking_mode
 
     def handler(request):
         body = json.loads(request.content)
         assert request.url.path == "/v1/chat/completions"
         assert request.headers["authorization"] == "Bearer test-secret-key"
         assert body["tools"][0]["function"]["name"] == "read_sample"
+        assert body["tool_choice"] == "required"
+        if thinking_mode == "disabled":
+            assert body["thinking"] == {"type": "disabled"}
+        else:
+            assert "thinking" not in body
         return httpx.Response(
             200,
             json={
@@ -48,7 +55,11 @@ async def test_http_tool_protocol(settings):
 
     model = CompatibleModel(settings, httpx.MockTransport(handler))
     reply = await model.complete(
-        ModelRequest(messages=[], tools=[{"type": "function", "function": {"name": "read_sample"}}])
+        ModelRequest(
+            messages=[],
+            tools=[{"type": "function", "function": {"name": "read_sample"}}],
+            tool_choice="required",
+        )
     )
     assert reply.tool_calls[0].id == "call-1"
     assert reply.input_tokens == 10
@@ -99,6 +110,7 @@ async def test_structured_output_request(settings):
         body = json.loads(request.content)
         assert body["response_format"]["json_schema"]["strict"] is True
         assert "tools" not in body
+        assert "thinking" not in body
         return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
 
     model = CompatibleModel(settings, httpx.MockTransport(handler))
@@ -109,10 +121,12 @@ async def test_structured_output_request(settings):
 async def test_structured_output_json_object_mode(settings):
     configure(settings)
     settings.llm_structured_output = "json_object"
+    settings.llm_thinking_mode = "disabled"
 
     def handler(request):
         body = json.loads(request.content)
         assert body["response_format"] == {"type": "json_object"}
+        assert body["thinking"] == {"type": "disabled"}
         assert "json_schema" not in body["response_format"]
         last = body["messages"][-1]
         assert last["role"] == "system"

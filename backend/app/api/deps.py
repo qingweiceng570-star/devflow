@@ -22,12 +22,16 @@ def mutation_identity(request: Request, identity=Depends(current_identity)):
     token = request.headers.get("x-csrf-token", "")
     if not token or not hmac.compare_digest(digest(token), session.csrf_hash):
         raise DomainError("CSRF_FAILED", "请刷新登录状态后重试", 403)
-    if user.role != "admin":
+    return identity
+
+
+def admin_identity(identity=Depends(mutation_identity)):
+    if identity[0].role != "admin":
         raise DomainError("FORBIDDEN", "需要管理员权限", 403)
     return identity
 
 
-def repo_scope(repo_id: UUID, identity=Depends(current_identity), db=Depends(get_db)):
+def repo_scope(repo_id: UUID, request: Request, identity=Depends(current_identity), db=Depends(get_db)):
     """Resolve a repository the caller belongs to, or 404 without information leak."""
     user, _ = identity
-    return require_repo(db, user, repo_id)
+    return require_repo(db, user, repo_id, minimum_role="analyst" if request.method not in {"GET", "HEAD"} else "viewer")

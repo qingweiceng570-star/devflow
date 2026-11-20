@@ -21,6 +21,8 @@ class CompatibleModel:
             self.settings.llm_token_parameter: request.max_output_tokens,
             "stream": False,
         }
+        if self.settings.llm_thinking_mode == "disabled":
+            payload["thinking"] = {"type": "disabled"}
         if request.tools:
             payload.update(tools=request.tools, tool_choice=request.tool_choice)
         if request.output_schema:

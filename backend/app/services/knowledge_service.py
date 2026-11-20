@@ -7,7 +7,7 @@ next generation is built (README 7.4).
 """
 
 import hashlib
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session as DBSession
@@ -27,6 +27,7 @@ from app.persistence.models import (
     Repository,
 )
 from app.rag.chunker import chunk_document
+from app.schemas.responses import job_view
 from app.storage.local import put_object
 
 
@@ -39,7 +40,10 @@ def _enqueue_index_job(db: DBSession, repo_id, settings: Settings) -> None:
         )
     )
     if active is None:
-        enqueue(db, kind=JobKind.INDEX, entity_id=repo_id, max_attempts=2)
+        enqueue(
+            db, kind=JobKind.INDEX, entity_id=repo_id, max_attempts=2,
+            available_at=datetime.now(UTC) + timedelta(seconds=settings.index_debounce_seconds),
+        )
 
 
 def _outbox(db: DBSession, repo_id, event_type: str, entity_id, payload: dict | None = None) -> None:
@@ -58,10 +62,13 @@ def upload_document(
     filename: str,
     content: bytes,
     source_revision: str | None = None,
+    origin: str = "source",
+    source_key: str | None = None,
+    commit: bool = True,
 ) -> tuple[Document, bool]:
     """Create or refresh one document; returns (document, changed)."""
     parsed = parse_document(filename, content, settings)
-    source_key = f"upload:{filename}"
+    source_key = source_key or f"upload:{filename}"
     now = datetime.now(UTC)
     document = db.scalar(
         select(Document).where(Document.repo_id == repo.id, Document.source_key == source_key)
@@ -71,7 +78,7 @@ def upload_document(
         document = Document(
             repo_id=repo.id,
             source_key=source_key,
-            origin="source",
+            origin=origin,
             title=parsed.title,
             byte_size=len(content),
         )
@@ -86,7 +93,9 @@ def upload_document(
             and current.parser_version == parsed.parser_version
         ):
             document.updated_at = now
-            db.commit()
+            document.source_revision = source_revision
+            if commit:
+                db.commit()
             return document, False
 
     version = db.scalar(
@@ -134,7 +143,8 @@ def upload_document(
     document.updated_at = now
     _outbox(db, repo.id, "document_uploaded", document.id, {"source_key": source_key})
     _enqueue_index_job(db, repo.id, settings)
-    db.commit()
+    if commit:
+        db.commit()
     return document, True
 
 
@@ -164,6 +174,20 @@ def request_reindex(db: DBSession, settings: Settings, repo: Repository) -> None
     db.commit()
 
 
+def request_repository_import(db: DBSession, repo: Repository) -> Job:
+    locked = db.scalar(select(Repository).where(Repository.id == repo.id).with_for_update())
+    if locked is None or locked.state != "active":
+        raise DomainError("REPO_DISABLED", "仓库已禁用，不能导入文档", 409)
+    job = db.scalar(select(Job).where(
+        Job.kind == JobKind.IMPORT_DOCS, Job.entity_id == repo.id,
+        Job.status.in_(ACTIVE_JOB_STATUSES),
+    ))
+    if job is None:
+        job = enqueue(db, kind=JobKind.IMPORT_DOCS, entity_id=repo.id, max_attempts=2)
+    db.commit()
+    return job
+
+
 def index_status(db: DBSession, repo_id) -> dict:
     active = db.scalar(
         select(IndexGeneration).where(
@@ -180,13 +204,34 @@ def index_status(db: DBSession, repo_id) -> dict:
         .select_from(IndexGeneration)
         .where(IndexGeneration.repo_id == repo_id, IndexGeneration.status == "building")
     )
-    latest_failed = db.scalar(
-        select(IndexGeneration)
-        .where(IndexGeneration.repo_id == repo_id, IndexGeneration.status == "failed")
-        .order_by(IndexGeneration.created_at.desc())
-        .limit(1)
+    failure_query = select(IndexGeneration).where(
+        IndexGeneration.repo_id == repo_id, IndexGeneration.status == "failed",
     )
+    if active is not None:
+        failure_query = failure_query.where(IndexGeneration.created_at > active.created_at)
+    latest_failed = db.scalar(failure_query.order_by(IndexGeneration.created_at.desc()).limit(1))
+    counts = db.execute(
+        select(
+            func.count(),
+            func.count().filter(Document.source_key.startswith("git:")),
+            func.count().filter(Document.source_key.startswith("upload:"), Document.origin != "generated"),
+            func.count().filter(Document.origin == "generated"),
+        )
+        .where(Document.repo_id == repo_id, Document.state == "active")
+    ).one()
+
+    def latest_job(kind):
+        job = db.scalar(select(Job).where(Job.kind == kind, Job.entity_id == repo_id)
+                        .order_by(Job.created_at.desc(), Job.id.desc()).limit(1))
+        return {**job_view(job), "result": (job.payload or {}).get("result")} if job else None
+
     return {
+        "document_count": counts[0],
+        "document_sources": {
+            "repository": counts[1], "uploaded": counts[2], "generated": counts[3],
+        },
+        "import_job": latest_job(JobKind.IMPORT_DOCS),
+        "index_job": latest_job(JobKind.INDEX),
         "active_generation": {
             "id": str(active.id),
             "chunk_count": active.chunk_count,

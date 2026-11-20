@@ -1,0 +1,301 @@
+{
+  "id": "ci-37859163438",
+  "repository": "simonw/ttok",
+  "run_id": "3a9b49af-45d8-4d98-a828-aca34820de77",
+  "kind": "ci_debug",
+  "target": {
+    "ci_run_id": 37859163438,
+    "attempt": 1,
+    "head_sha": "5a6ae1b7dc05a026085a25253fc27e2be5d5c0a2"
+  },
+  "config": {
+    "prompt_version": "ci_debug.v1",
+    "toolset_version": "m2.1",
+    "model": "deepseek-chat",
+    "provider": "openai_compatible",
+    "agent_max_steps": 8,
+    "agent_max_tool_calls": 12,
+    "agent_total_token_budget": 30000,
+    "agent_timeout_seconds": 60.0,
+    "model_output_token_limit": 3000,
+    "max_diff_files": 200,
+    "max_diff_bytes": 2097152
+  },
+  "output": {
+    "details": {
+      "run": 37859163438,
+      "attempt": 1,
+      "jobs": [
+        {
+          "id": 113590523410,
+          "name": "test (3.14)",
+          "status": "completed",
+          "conclusion": "cancelled"
+        },
+        {
+          "id": 113590523651,
+          "name": "test (3.11)",
+          "status": "completed",
+          "conclusion": "cancelled"
+        },
+        {
+          "id": 113590523680,
+          "name": "test (3.12)",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "id": 113590523682,
+          "name": "test (3.13)",
+          "status": "completed",
+          "conclusion": "cancelled"
+        },
+        {
+          "id": 113590523782,
+          "name": "test (3.10)",
+          "status": "completed",
+          "conclusion": "cancelled"
+        }
+      ],
+      "status": "completed",
+      "conclusion": "failure",
+      "error_blocks": [],
+      "cause_category": "unknown",
+      "verification_steps": [
+        "拉取 job 113590523680 日志并定位首个失败 step 与错误信息",
+        "对比 3.12 与 3.13/3.14 的依赖解析日志，确认是否存在环境/依赖差异",
+        "检查同 head 的多次运行结果，判断是否可复现（单次失败不足以证明 flaky）",
+        "核对 workflow concurrency/fail-fast 配置解释 cancelled 原因"
+      ],
+      "fix_suggestions": [
+        "在拿到失败日志前不要猜测并修改代码",
+        "若日志显示依赖解析问题，固定 3.12 的依赖版本或补齐 wheel 支持",
+        "若日志显示特定用例断言失败，先确认是否为版本相关行为差异再修改测试",
+        "为该失败 job 增加日志留存/上传步骤，避免再次出现日志不可用"
+      ]
+    },
+    "schema_version": "1.0",
+    "kind": "ci_debug",
+    "summary": "目标 run 37859163438（attempt 1，head 5a6ae1b7）整体结论 failure，Workflow 为 Test。矩阵中仅 test (3.12)（job 113590523680）结论为 failure，其余四个 job（3.10、3.11、3.13、3.14）均为 cancelled。error_blocks 为空，且关键失败 job 的日志不可用（可能过期、不存在或权限不足），因此没有任何可引用的错误输出，无法定位根因；cause_category 只能为 unknown。cancelled 与 failure 应区别对待，同批大量 cancelled 可能来自并发取消策略，但无日志不能证实。",
+    "verdict": "not_applicable",
+    "coverage": "partial",
+    "freshness": "fresh",
+    "findings": [
+      {
+        "severity": "high",
+        "claim": "run 37859163438（attempt 1，head 5a6ae1b7dc05a026085a25253fc27e2be5d5c0a2）状态 completed、conclusion failure，触发本次分析。",
+        "evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "location": "run 37859163438",
+        "suggestion": "以该 run 为唯一目标继续取证，不要替换为其他 run/attempt。"
+      },
+      {
+        "severity": "high",
+        "claim": "矩阵 job 中只有 test (3.12)（job 113590523680）为 failure，是唯一真正失败的 job。",
+        "evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "location": "job 113590523680 (test 3.12)",
+        "suggestion": "优先获取该 job 的失败步骤与原始日志，作为根因判断的首要入口。"
+      },
+      {
+        "severity": "medium",
+        "claim": "该失败 job 的日志不可用（可能过期、不存在或权限不足），error_blocks 也为空，因此当前没有任何可引用的错误文本。",
+        "evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "location": "job 113590523680",
+        "suggestion": "重新获取该 job 日志；若确实过期，改用同 head_sha 的可访问构建或本地复现命令获取等价输出。"
+      },
+      {
+        "severity": "medium",
+        "claim": "test (3.10)、test (3.11)、test (3.13)、test (3.14) 四个 job 均为 cancelled，非成功也非失败，不能据此判定这些版本通过或失败。",
+        "evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "location": "jobs 113590523410 / 113590523651 / 113590523682 / 113590523782",
+        "suggestion": "核对是否为并发取消策略或失败后的级联取消，不要把 cancelled 计入通过的证据。"
+      }
+    ],
+    "hypotheses": [
+      {
+        "claim": "根因位于 Python 3.12 环境特有的兼容性问题（例如语法/弃用警告升级为错误或依赖 wheel 不匹配），导致该版本 job 失败并使其他 job 被取消。",
+        "supporting_evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "counter_evidence_ids": [],
+        "verification_steps": [
+          "获取 job 113590523680 的失败 step 名称与 stderr 首条错误",
+          "在同一 head 上仅重跑 3.12 观察是否稳定复现",
+          "对比 3.12 job 与其他 cancelled job 的依赖安装日志差异"
+        ]
+      },
+      {
+        "claim": "失败为测试用例本身不稳定（flaky），单次失败不足以证明。",
+        "supporting_evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "counter_evidence_ids": [],
+        "verification_steps": [
+          "获取失败用例名称与断言差异",
+          "查看同一 head 历史多次运行的该用例结果分布"
+        ]
+      },
+      {
+        "claim": "其他 job 的 cancelled 是失败后的级联取消或并发策略，与代码改动无关。",
+        "supporting_evidence_ids": [
+          "2496f93c-b894-493e-9218-4462452894e1"
+        ],
+        "counter_evidence_ids": [],
+        "verification_steps": [
+          "检查 workflow 中 jobs 的 concurrency 与 fail-fast 配置",
+          "查看 cancelled job 取消时间戳是否晚于 3.12 job 失败时间"
+        ]
+      }
+    ],
+    "missing_evidence": [
+      {
+        "item": "job 113590523680（test 3.12）的原始日志与失败步骤输出",
+        "reason": "服务器标注日志不可用：可能过期、不存在或权限不足",
+        "impact": "无法确定失败的错误类型与位置，根因只能判定为 unknown",
+        "next_action": "通过 GitHub Actions API/UI 重新拉取该 job 日志，或提供可访问的日志链接"
+      },
+      {
+        "item": "error_blocks 内容",
+        "reason": "目标返回 error_blocks 为空数组",
+        "impact": "缺少结构化错误摘要，无法快速定位失败文件与行号",
+        "next_action": "上传日志后重新提取错误块"
+      },
+      {
+        "item": "四个 cancelled job 的取消原因与时间线",
+        "reason": "cancelled 状态无日志与分析细节",
+        "impact": "无法区分级联取消与外部取消，可能误判影响面",
+        "next_action": "提供各 job 的 started_at/completed_at 与 workflow concurrency 配置"
+      }
+    ],
+    "next_actions": [
+      {
+        "description": "重新获取 job 113590523680 的日志（含失败 step 与 stderr），并在有日志后重新分析同一 run/attempt。",
+        "owner_hint": null,
+        "draft_id": null
+      },
+      {
+        "description": "若日志确已过期，在同一 head_sha 上本地或重跑获取 3.12 环境的等价失败输出，仅作为补充证据并标注来源。",
+        "owner_hint": null,
+        "draft_id": null
+      },
+      {
+        "description": "核对四个 cancelled job 的取消时间与 workflow 并发/fail-fast 配置，用于判断影响面。",
+        "owner_hint": null,
+        "draft_id": null
+      }
+    ],
+    "limitations": [
+      "job 113590523680：日志不可用：可能过期、不存在或权限不足",
+      "目标 CI 失败但缺少日志证据，不能判断根因",
+      "分析基于单一固定目标证据 2496f93c-b894-493e-9218-4462452894e1，未读取到任何日志内容。",
+      "关键失败 job 日志不可用（可能过期、不存在或权限不足），无法进行错误级定位。",
+      "cancelled 与 failure 状态已区分，但 cancelled 的真实原因未知。",
+      "不做合入/发布裁决；不执行任何命令或重跑 CI。"
+    ],
+    "scope": {
+      "actor_id": "f92dad19-1476-4eea-8d27-1b17cd4ddf96",
+      "repo_id": "54087c15-c69b-47a0-a588-ad43114faab0"
+    }
+  },
+  "evidence": [
+    {
+      "id": "2496f93c-b894-493e-9218-4462452894e1",
+      "type": "ci_run",
+      "locator": {
+        "ci_run_id": 37859163438,
+        "attempt": 1
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:16:59.134843+00:00",
+      "sha256": "39d3d5fc4ebf28192c578aa6f4beec72ec0d8e75cba6daa22a2b68f202f49e64",
+      "content": "{\"id\": 37859163438, \"run_attempt\": 1, \"head_sha\": \"5a6ae1b7dc05a026085a25253fc27e2be5d5c0a2\", \"status\": \"completed\", \"conclusion\": \"failure\", \"name\": \"Test\", \"updated_at\": \"2026-10-08T23:23:46Z\"}"
+    }
+  ],
+  "agent_usage": [
+    {
+      "input_hash": "6ee709c163aee1248dfd3aa27ed5fb621413d24c4ab3a07fb18c692a8b2a34a2",
+      "total_tokens": 6289,
+      "estimated": false,
+      "model_steps": 2,
+      "tool_calls": 1,
+      "context": {
+        "history_kept": 0,
+        "history_trimmed": false,
+        "estimated_input_tokens": 412
+      }
+    }
+  ],
+  "duration_seconds": 15.279348,
+  "prepared_target": [
+    {
+      "schema_version": "1.0",
+      "status": "partial",
+      "data": {
+        "id": 37859163438,
+        "run_attempt": 1,
+        "head_sha": "5a6ae1b7dc05a026085a25253fc27e2be5d5c0a2",
+        "status": "completed",
+        "conclusion": "failure",
+        "name": "Test",
+        "updated_at": "2026-10-08T23:23:46Z",
+        "jobs": [
+          {
+            "id": 113590523410,
+            "name": "test (3.14)",
+            "status": "completed",
+            "conclusion": "cancelled"
+          },
+          {
+            "id": 113590523651,
+            "name": "test (3.11)",
+            "status": "completed",
+            "conclusion": "cancelled"
+          },
+          {
+            "id": 113590523680,
+            "name": "test (3.12)",
+            "status": "completed",
+            "conclusion": "failure"
+          },
+          {
+            "id": 113590523682,
+            "name": "test (3.13)",
+            "status": "completed",
+            "conclusion": "cancelled"
+          },
+          {
+            "id": 113590523782,
+            "name": "test (3.10)",
+            "status": "completed",
+            "conclusion": "cancelled"
+          }
+        ],
+        "error_blocks": [],
+        "evidence_id": "2496f93c-b894-493e-9218-4462452894e1",
+        "limitations": [
+          "job 113590523680：日志不可用：可能过期、不存在或权限不足",
+          "目标 CI 失败但缺少日志证据，不能判断根因"
+        ]
+      },
+      "evidence_ids": [
+        "2496f93c-b894-493e-9218-4462452894e1"
+      ],
+      "warnings": [],
+      "error": null,
+      "meta": {
+        "source": "fixed_target",
+        "observed_at": "2026-10-15T06:17:02.990941Z",
+        "freshness": "fresh",
+        "truncated": false,
+        "next_cursor": null
+      }
+    }
+  ]
+}

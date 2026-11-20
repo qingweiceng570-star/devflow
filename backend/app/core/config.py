@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr = SecretStr("")
     llm_token_parameter: Literal["max_completion_tokens", "max_tokens"] = "max_completion_tokens"
     llm_structured_output: Literal["json_schema", "json_object"] = "json_schema"
+    llm_thinking_mode: Literal["provider_default", "disabled"] = "provider_default"
     model_timeout_seconds: float = Field(default=20, ge=0.1, le=60)
     agent_timeout_seconds: float = Field(default=60, ge=1, le=180)
     agent_max_steps: int = Field(default=8, ge=2, le=32)
@@ -50,7 +51,12 @@ class Settings(BaseSettings):
     embedding_timeout_seconds: float = Field(default=30, ge=5, le=120)
     embedding_batch_size: int = Field(default=32, ge=1, le=64)
     milvus_uri: str = ""
+    # Optional rerank endpoint (Jina/Cohere-compatible POST /rerank). When
+    # unset, retrieval stops after RRF fusion and reports no_reranker.
+    rerank_base_url: str = ""
     rerank_model: str = ""
+    rerank_api_key: SecretStr = SecretStr("")
+    rerank_timeout_seconds: float = Field(default=20, ge=1, le=120)
     rag_chunk_target_tokens: int = Field(default=600, ge=100, le=2000)
     rag_chunk_max_tokens: int = Field(default=900, ge=100, le=3000)
     rag_chunk_overlap_tokens: int = Field(default=80, ge=0, le=400)
@@ -58,6 +64,7 @@ class Settings(BaseSettings):
     rag_rerank_k: int = Field(default=20, ge=1, le=100)
     rag_final_k: int = Field(default=6, ge=1, le=50)
     bm25_max_chunks_per_repo: int = Field(default=50000, ge=100, le=200000)
+    index_debounce_seconds: float = Field(default=2, ge=0, le=30)
     worker_heartbeat_seconds: int = Field(default=10, ge=1, le=30)
     github_read_token: SecretStr = SecretStr("")
     github_write_token: SecretStr = SecretStr("")
@@ -65,6 +72,9 @@ class Settings(BaseSettings):
     # httpx trust_env: system proxy/CA settings. Default off so GitHub requests
     # egress deterministically; enable when the network requires a proxy.
     github_trust_env: bool = False
+    # Optional explicit HTTP(S) proxy for GitHub API requests, e.g.
+    # http://127.0.0.1:7897. When set it takes precedence over GITHUB_TRUST_ENV.
+    github_api_proxy: str = ""
     # Optional HTTP(S) proxy for git fetch/clone of GitHub repositories, e.g.
     # http://127.0.0.1:7897. Empty means direct connections.
     github_git_proxy: str = ""
@@ -85,7 +95,16 @@ class Settings(BaseSettings):
     max_code_file_bytes: int = Field(default=1048576, ge=1024, le=10485760)
     max_read_lines: int = Field(default=400, ge=1, le=2000)
     max_search_matches: int = Field(default=100, ge=1, le=500)
+    max_ci_log_bytes: int = Field(default=2097152, ge=1024, le=10485760)
+    max_ci_log_jobs: int = Field(default=5, ge=1, le=20)
+    max_ci_error_blocks: int = Field(default=8, ge=1, le=20)
     search_timeout_seconds: float = Field(default=5, ge=1, le=60)
+    workflow_timeout_seconds: int = Field(default=600, ge=60, le=1800)
+    workflow_token_budget: int = Field(default=60000, ge=1000, le=500000)
+    workflow_parallelism: int = Field(default=3, ge=1, le=3)
+    enabled_actions: list[str] = Field(default_factory=list)
+    write_repo_allowlist: list[str] = Field(default_factory=list)
+    mcp_server_allowlist: list[str] = Field(default_factory=list)
 
     @field_validator("app_origin")
     @classmethod
@@ -103,7 +122,7 @@ class Settings(BaseSettings):
             raise ValueError("APP_ORIGIN must contain only scheme and host/port")
         return value.rstrip("/")
 
-    @field_validator("llm_base_url", "github_api_base", "github_git_proxy", "embedding_base_url", "milvus_uri")
+    @field_validator("llm_base_url", "github_api_base", "github_api_proxy", "github_git_proxy", "embedding_base_url", "rerank_base_url", "milvus_uri")
     @classmethod
     def valid_model_url(cls, value: str) -> str:
         if not value:
@@ -139,6 +158,10 @@ class Settings(BaseSettings):
     @property
     def embedding_configured(self) -> bool:
         return bool(self.embedding_base_url and self.embedding_model)
+
+    @property
+    def rerank_configured(self) -> bool:
+        return bool(self.rerank_base_url and self.rerank_model)
 
     @property
     def vector_configured(self) -> bool:

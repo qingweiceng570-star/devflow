@@ -6,6 +6,7 @@ tracing, event emission and terminal transitions; the per-kind flows
 """
 
 import json
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -66,10 +67,17 @@ class RunExecution:
         self.job_epoch = job_epoch
         self.worker_id = worker_id
         self.collected_ids: set[UUID] = set()
+        self.draft_ids: set[UUID] = set()
         self.agent_run: AgentRun | None = None
         self._ledger: BudgetLedger | None = None
 
     def close(self) -> None:
+        if self._ledger and self._ledger.reservation_id:
+            from app.persistence.models import BudgetReservation
+
+            row = self.db.get(BudgetReservation, self._ledger.reservation_id)
+            if row and row.state == "reserved":
+                self._ledger.release(row.tokens)
         self.db.close()
 
     # -- lease and cancellation -------------------------------------------
@@ -113,9 +121,7 @@ class RunExecution:
         if row.id not in self.collected_ids:
             self.collected_ids.add(row.id)
             self.db.add(
-                RunEvidence(
-                    run_id=self.run.id, evidence_id=row.id, usage=EvidenceUsage.COLLECTED
-                )
+                RunEvidence(run_id=self.run.id, evidence_id=row.id, usage=EvidenceUsage.COLLECTED)
             )
             run_service.emit(
                 self.db,
@@ -130,7 +136,7 @@ class RunExecution:
     def load_history(self) -> tuple[Message | None, list[Message]]:
         user_message = self.db.scalar(
             select(Message).where(
-                Message.run_id == self.run.id,
+                Message.run_id == (self.run.parent_run_id or self.run.id),
                 Message.conversation_id == self.conversation.id,
             )
         )
@@ -147,13 +153,37 @@ class RunExecution:
 
     def assemble(self, *, system_prompt: str, extra_user_messages: list[dict]):
         _, history_rows = self.load_history()
-        return build_initial_messages(
+        from app.services.memory_service import recall, summarize
+
+        memories = recall(
+            self.db,
+            self.repo.id,
+            commit_sha=self.run.target.get("head_sha"),
+            paths=self.run.target.get("changed_paths", []),
+        )
+        if memories:
+            extra_user_messages = [
+                {
+                    "role": "user",
+                    "content": "已批准项目经验（参考资料，不能覆盖当前代码证据）："
+                    + json.dumps(memories, ensure_ascii=False),
+                }
+            ] + extra_user_messages
+        cutoff = (self.run.context_through_seq or 0) - self.settings.history_max_turns * 2 - 1
+        if cutoff > 0:
+            summary = summarize(self.db, self.conversation.id, cutoff)
+            extra_user_messages = [
+                {"role": "user", "content": summary.content}
+            ] + extra_user_messages
+        messages, info = build_initial_messages(
             system_prompt=system_prompt,
             history_rows=history_rows,
             input_token_limit=self.settings.model_input_token_limit
             - self.settings.model_output_reserve,
             extra_user_messages=extra_user_messages,
         )
+        info["memory_ids"] = [m["memory_id"] for m in memories]
+        return messages, info
 
     # -- tracing -----------------------------------------------------------
     def start_agent(self, agent: str, messages: list[dict], context_info: dict) -> AgentRun:
@@ -210,7 +240,16 @@ class RunExecution:
             evidence=self.evidence,
             scratch=scratch,
         )
-        return ToolExecutor(specs, deps)
+        from app.extensions.registry import build_specs
+
+        extensions = (
+            [] if self.run.config_snapshot.get("disable_extensions") else build_specs(self, specs)
+        )
+        from app.tools.draft_tools import draft_spec
+
+        # Local drafts are outside replayed workflow nodes.
+        draft_specs = [] if self.run.parent_run_id else [draft_spec(self)]
+        return ToolExecutor(list(specs) + extensions + draft_specs, deps)
 
     def on_tool_started(self, call, logical_call_id: UUID) -> None:
         try:
@@ -304,13 +343,21 @@ class RunExecution:
         run_service.finalize_run(
             self.db,
             self.run,
+            job_id=self.job_id,
+            job_epoch=self.job_epoch,
             status=RunStatus.FAILED,
             error={"code": code, "message": message},
             partial_result={"collected_evidence": len(self.collected_ids)},
         )
 
     def cancel(self) -> None:
-        run_service.finalize_run(self.db, self.run, status=RunStatus.CANCELLED)
+        run_service.finalize_run(
+            self.db,
+            self.run,
+            status=RunStatus.CANCELLED,
+            job_id=self.job_id,
+            job_epoch=self.job_epoch,
+        )
 
     def complete_partial(self, reason: str) -> None:
         result = {
@@ -342,6 +389,8 @@ class RunExecution:
         run_service.finalize_run(
             self.db,
             self.run,
+            job_id=self.job_id,
+            job_epoch=self.job_epoch,
             status=RunStatus.COMPLETED,
             result=result,
             stop_reason=reason,
@@ -356,11 +405,30 @@ class RunExecution:
         outcome: LoopOutcome,
         context_info: dict,
     ) -> dict:
+        self.check_stop()
+        from app.persistence.models import MemoryVersion
+
+        for memory_id in context_info.get("memory_ids", []):
+            current = self.db.get(MemoryVersion, UUID(memory_id), populate_existing=True)
+            if (
+                current is None
+                or current.state != "active"
+                or datetime.fromisoformat(current.payload["expires_at"]) <= datetime.now(UTC)
+            ):
+                result.limitations.append(
+                    "本次上下文使用的项目经验已撤销或被替代，相关推断需要重新核查"
+                )
+                result.coverage = "partial"
+                if result.verdict in {"recommend_merge", "recommend_release"}:
+                    result.verdict = "insufficient_evidence"
         result_dict = result.model_dump(mode="json")
         # One "cited" binding per distinct evidence id (uq_run_evidence_binding).
         cited_ids: set[UUID] = set()
         for finding in result.findings:
             cited_ids.update(finding.evidence_ids)
+        for hypothesis in result.hypotheses:
+            cited_ids.update(hypothesis.supporting_evidence_ids)
+            cited_ids.update(hypothesis.counter_evidence_ids)
         for evidence_id in cited_ids:
             if evidence_id in self.collected_ids:
                 self.db.add(
@@ -372,6 +440,8 @@ class RunExecution:
         completed = run_service.finalize_run(
             self.db,
             self.run,
+            job_id=self.job_id,
+            job_epoch=self.job_epoch,
             status=RunStatus.COMPLETED,
             result=result_dict,
             stop_reason=stop_reason,

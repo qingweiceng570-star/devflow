@@ -46,7 +46,9 @@ def source_repo(tmp_path):
     subprocess.run(["git", "-C", str(repo), "commit", "-qm", "x"], check=True)
     sha = subprocess.run(
         ["git", "-C", str(repo), "rev-parse", "HEAD"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout.strip()
     return repo, sha
 
@@ -96,7 +98,9 @@ def execute(database, settings, run_id, steps, fake, source_repo=None, on_reques
             settings,
             job,
             "w1",
-            client_factory=lambda s, t: GitHubClient(s, t, transport=httpx.MockTransport(fake.handler)),
+            client_factory=lambda s, t: GitHubClient(
+                s, t, transport=httpx.MockTransport(fake.handler)
+            ),
             model_factory=lambda s: model,
             workspace_factory=(
                 (lambda s, t: WorkspaceManager(s, t, remote_url=lambda r: str(source_repo[0])))
@@ -133,7 +137,13 @@ def test_complete_review_binds_diff_evidence(settings, database):
     run_id = submit(database, settings, conversation_id)
     steps = [
         {"tool": "get_pr_diff", "args": {"pr_number": 7}},
-        {"content_with_evidence": {"verdict": "hold", "severity": "high", "claim": "示例高风险变更"}},
+        {
+            "content_with_evidence": {
+                "verdict": "hold",
+                "severity": "high",
+                "claim": "示例高风险变更",
+            }
+        },
     ]
     result, model = execute(database, settings, run_id, steps, fake)
     assert result["status"] == "completed"
@@ -160,18 +170,30 @@ def test_complete_review_binds_diff_evidence(settings, database):
         )
         assert assistant is not None and "结论" in assistant.content
         # event sequence
-        events = [
-            row.type
-            for row in db.scalars(select(RunEvent).order_by(RunEvent.seq))
-        ]
+        events = [row.type for row in db.scalars(select(RunEvent).order_by(RunEvent.seq))]
         assert events[0] == "run.queued" and events[1] == "run.started"
         assert events[-1] == "run.completed"
         assert "tool.started" in events and "tool.finished" in events
         assert "evidence.added" in events
 
 
+def test_live_ci_failure_overrides_stale_success(settings, database):
+    fake = FakeGitHub()
+    repo_id, conversation_id = make_repo_and_conversation(
+        database, config={"required_checks": ["ci"]}
+    )
+    add_ci_run(database, repo_id, HEAD_SHA, conclusion="success")
+    run_id = submit(database, settings, conversation_id)
+    result, _ = execute(
+        database, settings, run_id, [{"content": pr_review_answer("recommend_merge")}], fake
+    )
+    assert result["verdict"] == "hold"
+
+
 def test_recommend_merge_kept_only_when_everything_green(settings, database):
     fake = FakeGitHub()
+    old_ci = fake.ci_runs
+    fake.ci_runs = lambda: [{**row, "conclusion": "success"} for row in old_ci()]
     repo_id, conversation_id = make_repo_and_conversation(
         database, config={"required_checks": ["ci"]}
     )
@@ -261,9 +283,10 @@ def test_cancel_between_steps(settings, database):
         run = db.get(Run, run_id)
         assert run.status == RunStatus.CANCELLED
         assert db.scalars(select(ToolCall)).all() == []  # no tool executed
-        assert db.scalar(
-            select(Message).where(Message.run_id == run_id, Message.role == "assistant")
-        ) is None
+        assert (
+            db.scalar(select(Message).where(Message.run_id == run_id, Message.role == "assistant"))
+            is None
+        )
 
 
 def test_budget_exhausted_completes_with_partial_result(settings, database):
@@ -302,7 +325,10 @@ def test_read_file_uses_pinned_sha_and_reads_code(settings, database, source_rep
     _, conversation_id = make_repo_and_conversation(database)
     run_id = submit(database, settings, conversation_id)
     steps = [
-        {"tool": "read_file", "args": {"relative_path": "src/app.py", "start_line": 1, "end_line": 3}},
+        {
+            "tool": "read_file",
+            "args": {"relative_path": "src/app.py", "start_line": 1, "end_line": 3},
+        },
         {"content_with_evidence": {"verdict": "hold", "severity": "medium"}},
     ]
     result, _ = execute(database, settings, run_id, steps, fake, source_repo=source_repo)
@@ -325,7 +351,9 @@ def test_tool_budget_exceeded_returns_stable_error(settings, database, source_re
     subprocess.run(["git", "-C", str(repo_dir), "commit", "-qm", "big"], check=True)
     new_sha = subprocess.run(
         ["git", "-C", str(repo_dir), "rev-parse", "HEAD"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout.strip()
     fake = FakeGitHub(head_sha=new_sha)
     _, conversation_id = make_repo_and_conversation(database)
@@ -382,7 +410,9 @@ def test_shared_evidence_cited_once_across_findings(settings, database):
             settings,
             job,
             "w1",
-            client_factory=lambda s, t: GitHubClient(s, t, transport=httpx.MockTransport(fake.handler)),
+            client_factory=lambda s, t: GitHubClient(
+                s, t, transport=httpx.MockTransport(fake.handler)
+            ),
             model_factory=lambda s: TwoFindingsModel(
                 [{"tool": "get_pr_diff", "args": {"pr_number": 7}}]
             ),

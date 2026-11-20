@@ -1,0 +1,383 @@
+{
+  "mode": "deterministic_offline",
+  "model_quality_evaluated": false,
+  "dataset_version": "1.0",
+  "dataset_sha256": "05e907ba4f5b8c7f2ca28b2b2979b8c9b549b301231a1651716d6d5ac3e2ecca",
+  "code_commit": "7d2a7e1e0496f186d7f61fea7a778153bb6f514a",
+  "working_tree_may_be_dirty": true,
+  "created_at": "2026-10-26T02:28:52.893632+00:00",
+  "groups": {
+    "pr": 10,
+    "ci": 8,
+    "issue": 6,
+    "knowledge": 8,
+    "workflow": 8
+  },
+  "passed": 40,
+  "total": 40,
+  "model_requests": 0,
+  "rows": [
+    {
+      "id": "pr-01",
+      "split": "regression",
+      "group": "pr",
+      "passed": true,
+      "actual": "recommend_merge",
+      "duration_ms": 0.011
+    },
+    {
+      "id": "pr-02",
+      "split": "development",
+      "group": "pr",
+      "passed": true,
+      "actual": "hold",
+      "duration_ms": 0.007
+    },
+    {
+      "id": "pr-03",
+      "split": "development",
+      "group": "pr",
+      "passed": true,
+      "actual": "insufficient_evidence",
+      "duration_ms": 0.003
+    },
+    {
+      "id": "pr-04",
+      "split": "regression",
+      "group": "pr",
+      "passed": true,
+      "actual": "insufficient_evidence",
+      "duration_ms": 0.002
+    },
+    {
+      "id": "pr-05",
+      "split": "development",
+      "group": "pr",
+      "passed": true,
+      "actual": "hold",
+      "duration_ms": 0.002
+    },
+    {
+      "id": "pr-06",
+      "split": "development",
+      "group": "pr",
+      "passed": true,
+      "actual": "hold",
+      "duration_ms": 0.001
+    },
+    {
+      "id": "pr-07",
+      "split": "regression",
+      "group": "pr",
+      "passed": true,
+      "actual": "insufficient_evidence",
+      "duration_ms": 0.001
+    },
+    {
+      "id": "pr-08",
+      "split": "development",
+      "group": "pr",
+      "passed": true,
+      "actual": "insufficient_evidence",
+      "duration_ms": 0.001
+    },
+    {
+      "id": "pr-09",
+      "split": "development",
+      "group": "pr",
+      "passed": true,
+      "actual": "hold",
+      "duration_ms": 0.001
+    },
+    {
+      "id": "pr-10",
+      "split": "regression",
+      "group": "pr",
+      "passed": true,
+      "actual": "hold",
+      "duration_ms": 0.001
+    },
+    {
+      "id": "ci-01",
+      "split": "development",
+      "group": "ci",
+      "passed": true,
+      "blocks": 1,
+      "duration_ms": 0.171
+    },
+    {
+      "id": "ci-02",
+      "split": "development",
+      "group": "ci",
+      "passed": true,
+      "blocks": 1,
+      "duration_ms": 0.045
+    },
+    {
+      "id": "ci-03",
+      "split": "regression",
+      "group": "ci",
+      "passed": true,
+      "blocks": 1,
+      "duration_ms": 0.068
+    },
+    {
+      "id": "ci-04",
+      "split": "development",
+      "group": "ci",
+      "passed": true,
+      "blocks": 1,
+      "duration_ms": 0.017
+    },
+    {
+      "id": "ci-05",
+      "split": "development",
+      "group": "ci",
+      "passed": true,
+      "blocks": 0,
+      "duration_ms": 0.004
+    },
+    {
+      "id": "ci-06",
+      "split": "regression",
+      "group": "ci",
+      "passed": true,
+      "blocks": 0,
+      "duration_ms": 0.004
+    },
+    {
+      "id": "ci-07",
+      "split": "development",
+      "group": "ci",
+      "passed": true,
+      "blocks": 1,
+      "duration_ms": 0.014
+    },
+    {
+      "id": "ci-08",
+      "split": "development",
+      "group": "ci",
+      "passed": true,
+      "blocks": 1,
+      "duration_ms": 0.194
+    },
+    {
+      "id": "issue-01",
+      "split": "regression",
+      "group": "issue",
+      "passed": true,
+      "retained_citations": [
+        "00000000-0000-0000-0000-000000000001"
+      ],
+      "notes": 0,
+      "duration_ms": 0.173
+    },
+    {
+      "id": "issue-02",
+      "split": "development",
+      "group": "issue",
+      "passed": true,
+      "retained_citations": [],
+      "notes": 1,
+      "duration_ms": 0.017
+    },
+    {
+      "id": "issue-03",
+      "split": "development",
+      "group": "issue",
+      "passed": true,
+      "retained_citations": [
+        "00000000-0000-0000-0000-000000000001"
+      ],
+      "notes": 1,
+      "duration_ms": 0.014
+    },
+    {
+      "id": "issue-04",
+      "split": "regression",
+      "group": "issue",
+      "passed": true,
+      "retained_citations": [],
+      "notes": 1,
+      "duration_ms": 0.006
+    },
+    {
+      "id": "issue-05",
+      "split": "development",
+      "group": "issue",
+      "passed": true,
+      "retained_citations": [
+        "00000000-0000-0000-0000-000000000001",
+        "00000000-0000-0000-0000-000000000002"
+      ],
+      "notes": 0,
+      "duration_ms": 0.013
+    },
+    {
+      "id": "issue-06",
+      "split": "development",
+      "group": "issue",
+      "passed": true,
+      "retained_citations": [],
+      "notes": 1,
+      "duration_ms": 0.006
+    },
+    {
+      "id": "knowledge-01",
+      "split": "regression",
+      "group": "knowledge",
+      "passed": true,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "hits": [
+        "auth"
+      ],
+      "duration_ms": 0.076
+    },
+    {
+      "id": "knowledge-02",
+      "split": "development",
+      "group": "knowledge",
+      "passed": true,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "hits": [
+        "queue"
+      ],
+      "duration_ms": 0.037
+    },
+    {
+      "id": "knowledge-03",
+      "split": "development",
+      "group": "knowledge",
+      "passed": true,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "hits": [
+        "rag"
+      ],
+      "duration_ms": 0.03
+    },
+    {
+      "id": "knowledge-04",
+      "split": "regression",
+      "group": "knowledge",
+      "passed": true,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "hits": [
+        "auth"
+      ],
+      "duration_ms": 0.026
+    },
+    {
+      "id": "knowledge-05",
+      "split": "development",
+      "group": "knowledge",
+      "passed": true,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "hits": [
+        "queue"
+      ],
+      "duration_ms": 0.023
+    },
+    {
+      "id": "knowledge-06",
+      "split": "development",
+      "group": "knowledge",
+      "passed": true,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "hits": [
+        "rag"
+      ],
+      "duration_ms": 0.023
+    },
+    {
+      "id": "knowledge-07",
+      "split": "regression",
+      "group": "knowledge",
+      "passed": true,
+      "recall_at_3": null,
+      "mrr": null,
+      "hits": [],
+      "duration_ms": 0.021
+    },
+    {
+      "id": "knowledge-08",
+      "split": "development",
+      "group": "knowledge",
+      "passed": true,
+      "recall_at_3": null,
+      "mrr": null,
+      "hits": [],
+      "duration_ms": 0.022
+    },
+    {
+      "id": "workflow-01",
+      "split": "development",
+      "group": "workflow",
+      "passed": true,
+      "accepted": true,
+      "duration_ms": 0.015
+    },
+    {
+      "id": "workflow-02",
+      "split": "regression",
+      "group": "workflow",
+      "passed": true,
+      "accepted": false,
+      "duration_ms": 0.011
+    },
+    {
+      "id": "workflow-03",
+      "split": "development",
+      "group": "workflow",
+      "passed": true,
+      "accepted": false,
+      "duration_ms": 0.295
+    },
+    {
+      "id": "workflow-04",
+      "split": "development",
+      "group": "workflow",
+      "passed": true,
+      "accepted": true,
+      "duration_ms": 0.021
+    },
+    {
+      "id": "workflow-05",
+      "split": "regression",
+      "group": "workflow",
+      "passed": true,
+      "accepted": false,
+      "duration_ms": 0.063
+    },
+    {
+      "id": "workflow-06",
+      "split": "development",
+      "group": "workflow",
+      "passed": true,
+      "accepted": false,
+      "duration_ms": 0.009
+    },
+    {
+      "id": "workflow-07",
+      "split": "development",
+      "group": "workflow",
+      "passed": true,
+      "accepted": false,
+      "duration_ms": 0.132
+    },
+    {
+      "id": "workflow-08",
+      "split": "regression",
+      "group": "workflow",
+      "passed": true,
+      "accepted": true,
+      "duration_ms": 0.013
+    }
+  ],
+  "source_sha256": "083ca36ec3041eec9bf7442faa9a5702b08787087267377b04295d899538b822"
+}

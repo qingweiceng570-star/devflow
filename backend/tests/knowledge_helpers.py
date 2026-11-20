@@ -54,5 +54,5 @@ def run_index_job(database, settings, repo_id: UUID, **handler_kwargs) -> dict:
 
 def upload_and_index(database, settings, repo_id: UUID, filename: str, text: str, **kwargs):
     document_id, _ = upload(database, settings, repo_id, filename, text.encode("utf-8"))
-    result = run_index_job(database, settings, repo_id)
+    result = run_index_job(database, settings, repo_id, **kwargs)
     return document_id, result

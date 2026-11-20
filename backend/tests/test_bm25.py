@@ -29,6 +29,20 @@ def test_search_deterministic_tie_break():
     assert [hit.chunk_id for hit in hits] == ["a", "b"]  # id tie-break
 
 
+def test_multiple_relevant_terms_outweigh_one_rare_term():
+    common = "alpha beta gamma delta epsilon zeta eta theta"
+    documents = [("rare", "omega filler filler filler filler filler filler filler")]
+    documents += [(f"relevant-{i:02}", common) for i in range(50)]
+    documents += [(f"other-{i:02}", "filler " * 8) for i in range(49)]
+    index = Bm25Index.build(documents)
+
+    hits = index.search("omega " + common, 51)
+
+    assert all(hit.chunk_id.startswith("relevant-") for hit in hits[:50])
+    assert hits[-1].chunk_id == "rare"
+    assert hits[0].score == pytest.approx(5.545177, abs=1e-6)
+
+
 def test_save_load_roundtrip(tmp_path):
     index = build_index()
     path = tmp_path / "bm25.json"

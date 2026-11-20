@@ -1,0 +1,31 @@
+{
+  "version": "2.0",
+  "captured_at": "2026-10-26T02:10:49.615248+00:00",
+  "split": "development",
+  "cases": [
+    {
+      "id": "issue-25",
+      "file": "issue-25.json",
+      "sha256": "2e05f6e35fd639ec0309f414a723e6b719d0ee28addcd194346749380d4e685d"
+    },
+    {
+      "id": "ci-37859163438",
+      "file": "ci-37859163438.json",
+      "sha256": "431597b31866768cb781634d616d44925cde711b3aba4e2ac0ee841ed0d67990"
+    },
+    {
+      "id": "pr-16",
+      "file": "pr-16.json",
+      "sha256": "93fcc6c3f5c97d0f7b198872d992854f984b974c4f064262fccd18dd26c1a352"
+    },
+    {
+      "id": "psf-requests-pr-6655",
+      "file": "psf-requests-pr-6655.json",
+      "sha256": "fab2ad7e2a2c632e4dc1b5be5ca96e095d07796b5586712751d105a8803e3cff"
+    }
+  ],
+  "origin": "frozen_evidence_replay",
+  "model_requests": 8,
+  "total_tokens": 34455,
+  "failures": []
+}

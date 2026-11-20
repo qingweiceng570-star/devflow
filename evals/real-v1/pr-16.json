@@ -1,0 +1,210 @@
+{
+  "id": "pr-16",
+  "repository": "simonw/ttok",
+  "run_id": "72aab1ae-ee41-4a6f-afe6-869610e1876e",
+  "kind": "pr_review",
+  "target": {
+    "pr_number": 16,
+    "head_sha": "b56570be465aca1b95087be00b09c167c638a832",
+    "base_sha": "5a6ae1b7dc05a026085a25253fc27e2be5d5c0a2",
+    "refreshed_at": "2026-10-15T06:25:44.588653+00:00"
+  },
+  "config": {
+    "prompt_version": "release_check.v1",
+    "toolset_version": "m2.1",
+    "model": "deepseek-chat",
+    "provider": "openai_compatible",
+    "agent_max_steps": 8,
+    "agent_max_tool_calls": 12,
+    "agent_total_token_budget": 30000,
+    "agent_timeout_seconds": 60.0,
+    "model_output_token_limit": 3000,
+    "max_diff_files": 200,
+    "max_diff_bytes": 2097152
+  },
+  "output": {
+    "details": {},
+    "schema_version": "1.0",
+    "kind": "pr_review",
+    "summary": "PR #16 为 ttok/cli.py 增加 --chunksize 选项，将 token 列表分片后逐块输出，并新增 3 条测试用例。差异覆盖完整（2/2 文件），改动小而集中。主要风险：--chunksize 0 或负数时 range 步长非法会抛 ValueError，且直接调用 encoding.decode 对解码结果中含换行的分片会产生多行输出，破坏「每行一个 chunk」的管道契约；--chunksize 与 --truncate 组合行为未定义/未测试。未配置必需检查，且该 head 无任何已同步 CI 运行，无法确认测试通过。",
+    "verdict": "insufficient_evidence",
+    "coverage": "complete",
+    "freshness": "fresh",
+    "findings": [
+      {
+        "severity": "medium",
+        "claim": "--chunksize 为 0 或负数时 range(0, len, chunksize) 会抛 ValueError，click 未限制取值范围，用户输入会直接导致未处理异常。",
+        "evidence_ids": [
+          "0a354a93-03fc-4f42-b336-c2e764fe9413"
+        ],
+        "location": "ttok/cli.py:118 (新增 chunks 构造) 与 :23 (@click.option(\"--chunksize\", type=int))",
+        "suggestion": "使用 click.IntRange(min=1) 或在函数内校验 <=0 并 click.echo(err=True)+sys.exit(1)，并补充对应测试。"
+      },
+      {
+        "severity": "medium",
+        "claim": "分片输出的换行分隔假设不成立：encoding.decode(chunk) 若解码结果本身含换行，会额外产生空行/多行，破坏 PR 描述中可 pipe 给 split -l 1 的一行一 chunk 契约。",
+        "evidence_ids": [
+          "0a354a93-03fc-4f42-b336-c2e764fe9413",
+          "f21cf2a8-fbf6-4e06-9d06-aee9882870cf"
+        ],
+        "location": "ttok/cli.py:126-128 (elif chunksize 分支)",
+        "suggestion": "在文档中明示该限制，或对 chunk 解码结果做换行处理/改用显式分隔符，并增加含换行输入的测试。"
+      },
+      {
+        "severity": "low",
+        "claim": "--chunksize 与 --truncate 同时使用时行为未定义且无测试：代码先截断再分片，结果可能让用户误以为 chunksize 是输出上限。",
+        "evidence_ids": [
+          "0a354a93-03fc-4f42-b336-c2e764fe9413"
+        ],
+        "location": "ttok/cli.py:115-118",
+        "suggestion": "在 help 文本或 README 中说明二者组合语义，并添加组合测试用例。"
+      },
+      {
+        "severity": "info",
+        "claim": "新增的 --chunksize 未在 help 中说明与 --tokens/--encode 的交互，且未验证分片总数信息（如 chunk 数量）对 embedding 场景的可观测性。",
+        "evidence_ids": [
+          "0a354a93-03fc-4f42-b336-c2e764fe9413",
+          "402c7ae3-c2f0-4476-b509-76804b5a0c84"
+        ],
+        "location": "ttok/cli.py:23",
+        "suggestion": "补充 help 文本说明各输出模式的差异。"
+      }
+    ],
+    "hypotheses": [
+      {
+        "claim": "新测试用例在未修改的 main 分支上会失败（属于新增能力测试），因此需要 CI 在新 head 上运行才能确认通过。",
+        "supporting_evidence_ids": [
+          "f21cf2a8-fbf6-4e06-9d06-aee9882870cf"
+        ],
+        "counter_evidence_ids": [],
+        "verification_steps": [
+          "在该 head 上运行 pytest tests/test_ttok.py",
+          "对 --chunksize 0 手工执行 CLI 观察异常"
+        ]
+      }
+    ],
+    "missing_evidence": [
+      {
+        "item": "该 head_sha b56570be 的 CI 运行结果",
+        "reason": "get_ci_runs 返回 NO_RUNS_FOR_HEAD，无任何与目标 head 匹配的运行",
+        "impact": "无法判断新增 3 条测试与既有测试是否通过，不能确认无回归",
+        "next_action": "在 PR 上触发/等待 CI，并复核 head 未变化后再复审"
+      },
+      {
+        "item": "仓库单测与代码风格策略（有无 pytest/lint 必需检查）",
+        "reason": "required_checks.configured 为空，未配置必需检查清单",
+        "impact": "缺少判定合并门槛的客观依据",
+        "next_action": "确认维护者的合并策略与最低验证要求"
+      },
+      {
+        "item": "--chunksize 0/负数与含换行输入的边界行为",
+        "reason": "测试仅覆盖正整数 chunksize 与单行英文输入",
+        "impact": "边界崩溃与输出契约破坏无法被测试捕获",
+        "next_action": "补充边界与多行输入的测试用例"
+      }
+    ],
+    "next_actions": [
+      {
+        "description": "在 head b56570be 上运行 pytest 并回报结果",
+        "owner_hint": "PR 作者 web-sst",
+        "draft_id": null
+      },
+      {
+        "description": "为 --chunksize 增加 IntRange(min=1) 或显式校验并补边界测试",
+        "owner_hint": "PR 作者 web-sst",
+        "draft_id": null
+      },
+      {
+        "description": "在 help 中说明 --chunksize 与 --tokens/--encode/--truncate 的交互",
+        "owner_hint": "PR 作者 web-sst",
+        "draft_id": null
+      }
+    ],
+    "limitations": [
+      "仅审查 diff 与新增行上下文，未完整通读 ttok/cli.py 其余逻辑",
+      "get_repo_summary 与 get_pr 数据为 stale，仓库状态可能已变化",
+      "无该 head 的 CI 运行，测试通过性未经独立验证",
+      "未评估 README/文档是否需同步更新（diff 未包含文档文件）"
+    ],
+    "scope": {
+      "actor_id": "f92dad19-1476-4eea-8d27-1b17cd4ddf96",
+      "repo_id": "54087c15-c69b-47a0-a588-ad43114faab0"
+    }
+  },
+  "evidence": [
+    {
+      "id": "f21cf2a8-fbf6-4e06-9d06-aee9882870cf",
+      "type": "pr_diff",
+      "locator": {
+        "pr_number": 16,
+        "path": "tests/test_ttok.py",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "head_sha": "b56570be465aca1b95087be00b09c167c638a832"
+      },
+      "source_url": "https://github.com/simonw/ttok/pull/16/files",
+      "observed_at": "2026-10-15T06:25:45.412595+00:00",
+      "sha256": "4b1264a21ae226c847a5cae342708c4a4929d36acb9be901834f00286862a2df",
+      "content": "diff 16 tests/test_ttok.py\n@@ -61,6 +61,9 @@ def test_ttok_count_and_tokens(args, expected_length, expected_tokens):\n             [b\"86127\", b\"15682\", b\"48864\", b\"21990\", b\"38641\", \"--decode\", \"--tokens\"],\n             \"[b'\\\\xe7\\\\xa7\\\\x81', b'\\\\xe3\\\\x81\\\\xaf', b'\\\\xe5\\\\xad\\\\xa6', b'\\\\xe7\\\\x94\\\\x9f', b'\\\\xe3\\\\x81\\\\xa7\\\\xe3\\\\x81\\\\x99']\",\n         ),\n+        ([\"hello\", \"big\", \"world\", \"out\", \"there\", \"--tokens\", \"--chunksize\", \"2\"], \"[b'hello', b' big']\\n[b' world', b' out']\\n[b' there']\"),\n+        ([\"hello\", \"big\", \"world\", \"out\", \"there\", \"--chunksize\", \"2\"], \"hello big\\n world out\\n there\"),\n+        ([\"hello\", \"big\", \"world\", \"out\", \"there\", \"--encode\", \"--chunksize\", \"2\"], \"15339 2466\\n1917 704\\n1070\"),\n     ),\n )\n def test_ttok_decode_encode_tokens(args, expected):"
+    },
+    {
+      "id": "0a354a93-03fc-4f42-b336-c2e764fe9413",
+      "type": "pr_diff",
+      "locator": {
+        "pr_number": 16,
+        "path": "ttok/cli.py",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 2,
+        "head_sha": "b56570be465aca1b95087be00b09c167c638a832"
+      },
+      "source_url": "https://github.com/simonw/ttok/pull/16/files",
+      "observed_at": "2026-10-15T06:25:45.425390+00:00",
+      "sha256": "927befd2fa0e79275d3d69c4b1efefa44f5779c5bcc683c7178786e45c0bd7f6",
+      "content": "diff 16 ttok/cli.py\n@@ -20,6 +20,7 @@\n )\n @click.option(\"as_tokens\", \"--tokens\", is_flag=True, help=\"Output full tokens\")\n @click.option(\"--allow-special\", is_flag=True, help=\"Do not error on special tokens\")\n+@click.option(\"--chunksize\", type=int, help=\"Output chunks of this size\")\n def cli(\n     prompt,\n     input,\n@@ -29,6 +30,7 @@ def cli(\n     decode_tokens,\n     as_tokens,\n     allow_special,\n+    chunksize,\n ):\n     \"\"\"\n     Count and truncate text based on tokens\n@@ -113,12 +115,23 @@ def cli(\n     if truncate:\n         tokens = tokens[:truncate]\n \n+    if chunksize:\n+        chunks = [tokens[i:i + chunksize] for i in range(0, len(tokens), chunksize)]\n+    else:\n+        chunks = [tokens]\n+\n     if encode_tokens:\n         if as_tokens:\n-            click.echo(encoding.decode_tokens_bytes(tokens))\n+            for chunk in chunks:\n+                click.echo(encoding.decode_tokens_bytes(chunk))\n         else:\n-            click.echo(\" \".join(str(t) for t in tokens))\n+            for chunk in chunks:\n+                click.echo(\" \".join(str(t) for t in chunk))\n+    elif chunksize:\n+        for chunk in chunks:\n+            click.echo(encoding.decode(chunk))\n     elif truncate:\n         click.echo(encoding.decode(tokens), nl=False)\n     else:\n         click.echo(len(tokens))\n+"
+    },
+    {
+      "id": "5e34533d-6c8a-4637-8483-d79aeae32f97",
+      "type": "repo_summary",
+      "locator": {
+        "window_days": 7,
+        "as_of": "2026-10-09T05:45:56.650621+00:00"
+      },
+      "source_url": null,
+      "observed_at": "2026-10-15T06:25:47.077777+00:00",
+      "sha256": "ded3d422a5d2b812ac4cdf78d7c2b42ab823c2fcbfa611aa001e8c9aef5f2a3d",
+      "content": "{\"counts\": {\"open_issues\": 7, \"open_pulls\": 3, \"merged_pulls_recent\": 1, \"failing_ci_runs_recent\": 4}, \"as_of\": \"2026-10-09T05:45:56.650621+00:00\", \"window_days\": 7, \"only_synced_scope\": true, \"ci_coverage\": {\"last_coverage\": \"complete\", \"at\": \"2026-10-09T05:45:55.993422+00:00\"}}"
+    },
+    {
+      "id": "402c7ae3-c2f0-4476-b509-76804b5a0c84",
+      "type": "pull_request",
+      "locator": {
+        "pr_number": 16,
+        "external_id": "2208141610",
+        "head_sha": "b56570be465aca1b95087be00b09c167c638a832"
+      },
+      "source_url": "https://github.com/simonw/ttok/pull/16",
+      "observed_at": "2026-10-15T06:25:47.161353+00:00",
+      "sha256": "f46e5765da581d41876b868d283da1aef3d93d8225a887dc7674f6978a19a73b",
+      "content": "This change implements a simple alternative to https://github.com/simonw/ttok/pull/2/files. It does not deal with output files, and instead simply prints each chunk sequentially by the existing output mechanism.\r\n\r\nWhen producing text output this is uninteresting. With `--tokens` it gives readable split output. Combined with `--encode` it produces one encoded chunk per line, output that can be piped to `split -l 1 prefix`, which can be decoded later. This makes it straightforward to split long text into chunks for embedding or other purposes."
+    }
+  ],
+  "agent_usage": [
+    {
+      "input_hash": "cbdce63fbd7957feec3e912b68a24b6e99cda5c280bccb3611078a1252ef8c46",
+      "total_tokens": 9559,
+      "estimated": false,
+      "model_steps": 2,
+      "tool_calls": 4,
+      "context": {
+        "history_kept": 0,
+        "history_trimmed": false,
+        "estimated_input_tokens": 1146,
+        "memory_ids": []
+      }
+    }
+  ],
+  "duration_seconds": 12.166717,
+  "prepared_target": []
+}

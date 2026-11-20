@@ -28,7 +28,9 @@ from app.persistence.models import (
 )
 from app.rag.bm25_store import Bm25Index
 from app.rag.chunker import CHUNKER_VERSION, ESTIMATOR_VERSION, source_manifest
+from app.rag.embedding_cache import EmbeddingCache
 from app.rag.embeddings import EmbeddingClient
+from app.rag.index_cache import bm25_cache
 from app.rag.retriever import index_dir
 from app.rag.tokenizer import TOKENIZER_VERSION
 from app.rag.vector_store import MilvusVectorStore, VectorUnavailable
@@ -44,7 +46,10 @@ def _current_chunks(db: DBSession, repo_id: UUID) -> list[Chunk]:
             select(Chunk)
             .join(DocumentVersion, DocumentVersion.id == Chunk.document_version_id)
             .join(Document, Document.id == DocumentVersion.document_id)
-            .where(Chunk.repo_id == repo_id, Document.state == "active")
+            .where(
+                Chunk.repo_id == repo_id, Document.state == "active",
+                Document.current_version_id == Chunk.document_version_id,
+            )
             .order_by(Chunk.document_version_id, Chunk.ordinal)
         )
     )
@@ -115,13 +120,18 @@ def build_and_activate(
     # --- optional vector channel ------------------------------------------
     vector_ready = False
     vector_error = None
+    embedding_cache = None
+    reused_vectors, generated_vectors = 0, 0
     if settings.vector_configured:
         try:
             factory = vector_store_factory or (lambda s: MilvusVectorStore(s))
             embed_factory = embedding_factory or (lambda s: EmbeddingClient(s))
             store = factory(settings)
             embedder = embed_factory(settings)
-            vectors = embedder.embed([chunk.text for chunk in chunks]) if chunks else []
+            embedding_cache = EmbeddingCache(settings, repo_id)
+            vectors, reused_vectors, generated_vectors = embedding_cache.embed(
+                [chunk.text for chunk in chunks], embedder,
+            )
             rows = [
                 {
                     "chunk_id": str(chunk.id),
@@ -148,6 +158,8 @@ def build_and_activate(
         **generation.embedding_config,
         "enabled": vector_ready,
         "degraded_reason": None if vector_ready else (vector_error or "not_configured"),
+        "reused_vectors": reused_vectors,
+        "generated_vectors": generated_vectors,
     }
 
     # --- memberships and activation ---------------------------------------
@@ -183,6 +195,9 @@ def build_and_activate(
     db.commit()
     db.refresh(generation)
 
+    if vector_ready and embedding_cache is not None:
+        embedding_cache.save()
+
     _collect_old_generations(db, settings, repo_id, vector_store_factory)
     return generation
 
@@ -212,6 +227,7 @@ def _collect_old_generations(
         if generation.status == "superseded" and kept_superseded < KEPT_SUPERSEDED_GENERATIONS:
             kept_superseded += 1
             continue
+        bm25_cache.discard(index_dir(settings, repo_id, generation.id) / "bm25.json")
         shutil.rmtree(index_dir(settings, repo_id, generation.id), ignore_errors=True)
         db.execute(delete(IndexMembership).where(IndexMembership.generation_id == generation.id))
         db.delete(generation)

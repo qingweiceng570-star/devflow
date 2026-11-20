@@ -1,6 +1,6 @@
 import base64
 import binascii
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.core.errors import DomainError
@@ -10,8 +10,22 @@ _PAGE_DEFAULT = 20
 _PAGE_MAX = 100
 
 
+def iso_utc(value: datetime | None) -> str | None:
+    """Serialize a datetime as an explicit UTC timestamp.
+
+    SQLite returns naive datetimes while PostgreSQL returns aware ones; without
+    this normalization the browser would interpret a naive value as local time
+    and the API cursor would shift by the host timezone.
+    """
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat()
+
+
 def envelope(data):
-    return {"data": data, "meta": {"stage": "M3"}}
+    return {"data": data, "meta": {"stage": "M7"}}
 
 
 def page_limit(value: int | None) -> int:
@@ -21,7 +35,8 @@ def page_limit(value: int | None) -> int:
 
 
 def encode_cursor(created_at: datetime, row_id: UUID) -> str:
-    raw = f"{created_at.isoformat()}|{row_id}"
+    stamp = created_at if created_at.tzinfo else created_at.replace(tzinfo=UTC)
+    raw = f"{stamp.astimezone(UTC).isoformat()}|{row_id}"
     return base64.urlsafe_b64encode(raw.encode()).decode()
 
 
@@ -44,8 +59,8 @@ def repo_view(repo) -> dict:
         "default_branch": repo.default_branch,
         "state": repo.state,
         "version": repo.version,
-        "created_at": repo.created_at.isoformat(),
-        "updated_at": repo.updated_at.isoformat(),
+        "created_at": iso_utc(repo.created_at),
+        "updated_at": iso_utc(repo.updated_at),
     }
 
 
@@ -58,9 +73,9 @@ def sync_run_view(run) -> dict:
         "status": run.status,
         "counts": run.counts or {},
         "errors": run.errors or [],
-        "started_at": run.started_at.isoformat() if run.started_at else None,
-        "finished_at": run.finished_at.isoformat() if run.finished_at else None,
-        "created_at": run.created_at.isoformat(),
+        "started_at": iso_utc(run.started_at),
+        "finished_at": iso_utc(run.finished_at),
+        "created_at": iso_utc(run.created_at),
     }
 
 
@@ -71,10 +86,10 @@ def job_view(job) -> dict:
         "status": job.status,
         "attempt": job.attempt,
         "max_attempts": job.max_attempts,
-        "available_at": job.available_at.isoformat(),
+        "available_at": iso_utc(job.available_at),
         "last_error": job.last_error,
-        "created_at": job.created_at.isoformat(),
-        "updated_at": job.updated_at.isoformat(),
+        "created_at": iso_utc(job.created_at),
+        "updated_at": iso_utc(job.updated_at),
     }
 
 
@@ -89,8 +104,8 @@ def evidence_view(evidence) -> dict:
         "excerpt": evidence.excerpt,
         "content_hash": evidence.content_hash,
         "truncated": evidence.truncated,
-        "observed_at": evidence.observed_at.isoformat(),
-        "created_at": evidence.created_at.isoformat(),
+        "observed_at": iso_utc(evidence.observed_at),
+        "created_at": iso_utc(evidence.created_at),
     }
 
 
@@ -99,8 +114,8 @@ def conversation_view(conversation) -> dict:
         "id": str(conversation.id),
         "repo_id": str(conversation.repo_id),
         "title": conversation.title,
-        "created_at": conversation.created_at.isoformat(),
-        "updated_at": conversation.updated_at.isoformat(),
+        "created_at": iso_utc(conversation.created_at),
+        "updated_at": iso_utc(conversation.updated_at),
     }
 
 
@@ -111,7 +126,7 @@ def message_view(message) -> dict:
         "role": message.role,
         "content": message.content,
         "run_id": str(message.run_id) if message.run_id else None,
-        "created_at": message.created_at.isoformat(),
+        "created_at": iso_utc(message.created_at),
     }
 
 
@@ -125,13 +140,11 @@ def run_view(run, *, detail: bool = True) -> dict:
         "target": run.target or {},
         "stop_reason": run.stop_reason,
         "error": run.error,
-        "cancel_requested_at": run.cancel_requested_at.isoformat()
-        if run.cancel_requested_at
-        else None,
-        "started_at": run.started_at.isoformat() if run.started_at else None,
-        "finished_at": run.finished_at.isoformat() if run.finished_at else None,
-        "created_at": run.created_at.isoformat(),
-        "updated_at": run.updated_at.isoformat(),
+        "cancel_requested_at": iso_utc(run.cancel_requested_at),
+        "started_at": iso_utc(run.started_at),
+        "finished_at": iso_utc(run.finished_at),
+        "created_at": iso_utc(run.created_at),
+        "updated_at": iso_utc(run.updated_at),
     }
     if detail:
         view["result"] = run.result
@@ -150,8 +163,8 @@ def tool_call_view(row) -> dict:
         "error_code": row.error_code,
         "duration_ms": row.duration_ms,
         "evidence_ids": result.get("evidence_ids") or [],
-        "created_at": row.created_at.isoformat(),
-        "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+        "created_at": iso_utc(row.created_at),
+        "finished_at": iso_utc(row.finished_at),
     }
 
 
@@ -162,7 +175,7 @@ def event_view(event) -> dict:
         "seq": event.seq,
         "type": event.type,
         "payload": event.payload or {},
-        "timestamp": event.created_at.isoformat(),
+        "timestamp": iso_utc(event.created_at),
     }
 
 
@@ -180,9 +193,9 @@ def document_view(document) -> dict:
         "current_version_id": str(document.current_version_id)
         if document.current_version_id
         else None,
-        "created_at": document.created_at.isoformat(),
-        "updated_at": document.updated_at.isoformat(),
-        "deleted_at": document.deleted_at.isoformat() if document.deleted_at else None,
+        "created_at": iso_utc(document.created_at),
+        "updated_at": iso_utc(document.updated_at),
+        "deleted_at": iso_utc(document.deleted_at),
     }
 
 
@@ -192,5 +205,5 @@ def document_version_view(version) -> dict:
         "content_hash": version.content_hash,
         "source_revision": version.source_revision,
         "parser_version": version.parser_version,
-        "created_at": version.created_at.isoformat(),
+        "created_at": iso_utc(version.created_at),
     }

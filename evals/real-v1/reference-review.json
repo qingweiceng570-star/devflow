@@ -1,0 +1,119 @@
+{
+  "reviewer_type": "assistant_source_review",
+  "human_review_status": "pending",
+  "split": "development",
+  "cases": {
+    "issue-25": {
+      "output_sha256": "38fa5e4d60a4c5d739beb5fe5f281d5e9c6a722232cdc785d65a04eeedcbc96f",
+      "expected_verdict": "not_applicable",
+      "claims": [
+        {
+          "finding": 0,
+          "truth": "supported",
+          "citation_support": "supported",
+          "reason": "标题、closed 状态和版本计划均在目标 Issue 快照中。",
+          "cited_evidence_ids": [
+            "b58bf04e-e709-463e-82cb-18bd32ad2ee4"
+          ]
+        },
+        {
+          "finding": 1,
+          "truth": "supported",
+          "citation_support": "supported",
+          "reason": "三个被引用 Issue 的标题/描述直接支持其主题；影响映射属于有依据的建议。",
+          "cited_evidence_ids": [
+            "914c7543-898b-4d2c-91c3-39e8160d7c37",
+            "5b07d301-6e3d-4f43-9425-9db9a90a9162",
+            "334d6606-de00-442b-a426-6a13d8ef2dc5"
+          ]
+        }
+      ]
+    },
+    "ci-37859163438": {
+      "output_sha256": "a399b163e94e89d92cc163980b41953e6ddb6f22834d17a8ac6cb9b4c1e6f9ad",
+      "expected_verdict": "not_applicable",
+      "claims": [
+        {
+          "finding": 0,
+          "truth": "supported",
+          "citation_support": "supported",
+          "reason": "运行快照包含固定 run/attempt/head 与 completed/failure。",
+          "cited_evidence_ids": [
+            "2496f93c-b894-493e-9218-4462452894e1"
+          ]
+        },
+        {
+          "finding": 1,
+          "truth": "supported",
+          "citation_support": "unsupported",
+          "reason": "目标工具快照中的 jobs 支持事实，但被引用的 ci_run 快照没有 jobs 字段。",
+          "cited_evidence_ids": [
+            "2496f93c-b894-493e-9218-4462452894e1"
+          ]
+        },
+        {
+          "finding": 2,
+          "truth": "supported",
+          "citation_support": "unsupported",
+          "reason": "目标工具和限制记录支持没有日志片段；引用的运行元数据不包含日志请求结果。",
+          "cited_evidence_ids": [
+            "2496f93c-b894-493e-9218-4462452894e1"
+          ]
+        },
+        {
+          "finding": 3,
+          "truth": "supported",
+          "citation_support": "unsupported",
+          "reason": "目标工具的 jobs 显示四项 cancelled；被引用的 ci_run 元数据不包含 job 状态。",
+          "cited_evidence_ids": [
+            "2496f93c-b894-493e-9218-4462452894e1"
+          ]
+        }
+      ]
+    },
+    "pr-16": {
+      "output_sha256": "0ec1379f5d7c6b3ca8f7a4e16f1527fec31753d26bf981a6e1fe235652e3bb80",
+      "expected_verdict": "insufficient_evidence",
+      "claims": [
+        {
+          "finding": 0,
+          "truth": "refuted",
+          "citation_support": "unsupported",
+          "reason": "chunksize=0 被 if chunksize 跳过；负步长 range 从 0 到正数为空迭代，并不抛 ValueError。",
+          "cited_evidence_ids": [
+            "0a354a93-03fc-4f42-b336-c2e764fe9413"
+          ]
+        },
+        {
+          "finding": 1,
+          "truth": "refuted",
+          "citation_support": "unsupported",
+          "reason": "PR 原文将一行一个 chunk 的承诺限定在 --encode 模式，未对解码文本承诺此契约。",
+          "cited_evidence_ids": [
+            "0a354a93-03fc-4f42-b336-c2e764fe9413",
+            "f21cf2a8-fbf6-4e06-9d06-aee9882870cf"
+          ]
+        },
+        {
+          "finding": 2,
+          "truth": "uncertain",
+          "citation_support": "partial",
+          "reason": "diff 支持先截断后分片，但整个仓库未定义组合语义/没有测试不能仅凭该 diff 确认。",
+          "cited_evidence_ids": [
+            "0a354a93-03fc-4f42-b336-c2e764fe9413"
+          ]
+        },
+        {
+          "finding": 3,
+          "truth": "uncertain",
+          "citation_support": "partial",
+          "reason": "新增 help 简短可核查；未验证总数信息及可观测性是改进建议，不能作为已确认缺陷。",
+          "cited_evidence_ids": [
+            "0a354a93-03fc-4f42-b336-c2e764fe9413",
+            "402c7ae3-c2f0-4476-b509-76804b5a0c84"
+          ]
+        }
+      ]
+    }
+  }
+}
